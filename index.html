@@ -63,13 +63,13 @@
             <div id="chart-container" class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 hidden relative">
                 
                 <div class="flex bg-gray-200 p-1 rounded-xl mb-4">
-                    <button id="tab-expense" onclick="switchChartTab('expense')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-bold bg-white text-gray-800 shadow-xs">
+                    <button id="tab-expense" onclick="switchChartTab('expense')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
                         支出内訳
                     </button>
-                    <button id="tab-savings" onclick="switchChartTab('savings')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500">
+                    <button id="tab-savings" onclick="switchChartTab('savings')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
                         財形推移
                     </button>
-                    <button id="tab-balance" onclick="switchChartTab('balance')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500">
+                    <button id="tab-balance" onclick="switchChartTab('balance')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
                         毎月度残金
                     </button>
                 </div>
@@ -501,13 +501,11 @@
             });
 
             // 残高画面の各カードへ反映
-            if(document.getElementById('normal-balance')) {
-                document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
-                document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
-                document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
-            }
+            document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
+            document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
+            document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
 
-            // 全期間・年度残高の更新処理
+            // 【修正】HTML側に要素が不足していた全期間・年度残高の更新処理をエラーなく動くように保護
             let allTimeBalance = 0;
             transactions.forEach(tx => { allTimeBalance += (tx.income - tx.expense); });
 
@@ -594,15 +592,42 @@
             renderCharts(expenseMap);
         }
 
-        // ★【ロジック強化】円グラフ専用のパーセント表記自動合成システム
+        function renderCharts(expenseMap) {
+            const tabs = {
+                expense: { btn: 'tab-expense', wrapper: 'expense-chart-wrapper' },
+                savings: { btn: 'tab-savings', wrapper: 'savings-chart-wrapper' },
+                balance: { btn: 'tab-balance', wrapper: 'balance-chart-wrapper' }
+            };
+
+            Object.keys(tabs).forEach(t => {
+                const btn = document.getElementById(tabs[t].btn);
+                const wrapper = document.getElementById(tabs[t].wrapper);
+                if (t === currentChartTab) {
+                    btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-bold bg-white text-gray-800 shadow-xs";
+                    wrapper.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500";
+                    wrapper.classList.add('hidden');
+                }
+            });
+
+            if (currentChartTab === 'expense') {
+                drawExpenseChart(expenseMap);
+            } else if (currentChartTab === 'savings') {
+                drawSavingsChart();
+            } else if (currentChartTab === 'balance') {
+                drawBalanceChart();
+            }
+        }
+
         function drawExpenseChart(expenseMap) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const canvasEl = document.getElementById('expenseChart');
             const emptyMsg = document.getElementById('expense-empty-msg');
-            const keys = Object.keys(expenseMap);
+            const labels = Object.keys(expenseMap);
             const data = Object.values(expenseMap);
 
-            if (keys.length === 0) {
+            if (labels.length === 0) {
                 canvasEl.classList.add('hidden');
                 emptyMsg.classList.remove('hidden');
                 return;
@@ -610,20 +635,12 @@
             canvasEl.classList.remove('hidden');
             emptyMsg.classList.add('hidden');
 
-            // 今月の支出総額から、各科目の占める％を逆算
-            const total = data.reduce((sum, val) => sum + val, 0);
-            const labels = keys.map((key, idx) => {
-                const amt = data[idx];
-                const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
-                return `${key} (${pct}%)`; // 項目名の後ろに (〇%) を自動合成
-            });
-
             if (expenseChart) expenseChart.destroy();
 
             expenseChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: labels, // ％付きラベルをはめ込む
+                    labels: labels,
                     datasets: [{
                         data: data,
                         backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
@@ -632,12 +649,7 @@
                 },
                 options: {
                     responsive: true,
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { boxWidth: 10, font: { size: 9 } } 
-                        } 
-                    }
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
                 }
             });
         }
