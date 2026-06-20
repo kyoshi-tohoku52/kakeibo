@@ -1,791 +1,1571 @@
 <!DOCTYPE html>
+
 <html lang="ja">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
     <title>マイ家計簿 Pro</title>
+
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
     <style>
+
         body { font-family: 'Helvetica Neue', Arial, sans-serif; }
+
         .scrollbar-none::-webkit-scrollbar { display: none; }
+
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
+
+
         /* スマホ全体の誤スクロール・びよんとなるバウンスを完全にロック */
+
         html, body {
+
             overflow: hidden;
+
             height: 100vh;
+
             height: 100dvh;
+
             margin: 0;
+
             padding: 0;
+
             position: relative;
+
         }
+
     </style>
+
 </head>
+
 <body class="bg-gray-100 flex justify-center">
 
+
+
     <div class="w-full max-w-md bg-white h-full shadow-lg flex flex-col justify-between relative overflow-hidden">
+
         
+
         <div id="page-kakeibo" class="p-4 flex-1 overflow-y-auto pb-28">
+
             
+
             <div class="flex justify-between items-center mb-4">
+
                 <h1 class="text-2xl font-bold text-gray-800">📝 家計簿</h1>
+
                 
+
                 <select id="month-filter" onchange="changeMonthFilter()" class="border border-gray-300 rounded-lg p-1.5 text-sm bg-gray-50 font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+
                     <option value="all">全期間</option>
+
                 </select>
+
             </div>
+
+
 
             <div class="bg-slate-900 text-white rounded-2xl p-4 mb-5 shadow-md border border-slate-800/30">
+
                 
+
                 <div class="flex justify-between text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-xl border border-slate-800/50">
+
                     <div>資産総額(全期間): <span id="all-time-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+
                     <div><span id="fiscal-year-label">----</span>年度残高: <span id="year-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+
                 </div>
+
+
 
                 <div class="flex justify-between items-center mb-2">
+
                     <span class="text-sm text-slate-400">選択月の純収支</span>
+
                     <span id="total-balance" class="text-2xl font-bold text-blue-400">¥0</span>
+
                 </div>
+
                 <hr class="border-slate-800 my-2">
+
                 <div class="flex justify-around text-center mt-2">
+
                     <div>
+
                         <div class="text-xs text-slate-400">収入合計</div>
+
                         <div id="total-income" class="text-base font-bold text-green-400">¥0</div>
+
                     </div>
+
                     <div>
+
                         <div class="text-xs text-slate-400">支出合計</div>
+
                         <div id="total-expense" class="text-base font-bold text-red-400">¥0</div>
+
                     </div>
+
                 </div>
+
             </div>
+
+
 
             <div id="chart-container" class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 hidden relative">
+
                 
+
                 <div class="flex bg-gray-200 p-1 rounded-xl mb-4">
+
                     <button id="tab-expense" onclick="switchChartTab('expense')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+
                         支出内訳
+
                     </button>
+
                     <button id="tab-savings" onclick="switchChartTab('savings')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+
                         財形推移
+
                     </button>
+
                     <button id="tab-balance" onclick="switchChartTab('balance')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+
                         毎月度残金
+
                     </button>
+
                 </div>
+
+
 
                 <div id="expense-chart-wrapper" class="w-full max-w-[220px] mx-auto hidden">
+
                     <canvas id="expenseChart"></canvas>
+
                     <div id="expense-empty-msg" class="text-center text-sm text-gray-400 py-6 hidden">支出データがありません</div>
+
                 </div>
+
+
 
                 <div id="savings-chart-wrapper" class="w-full hidden">
+
                     <canvas id="savingsChart"></canvas>
+
                     <div id="savings-empty-msg" class="text-center text-sm text-gray-400 py-6 hidden">財形貯蓄のデータがまだありません</div>
+
                 </div>
+
+
 
                 <div id="balance-chart-wrapper" class="w-full hidden pt-2">
+
                     <canvas id="balanceChart"></canvas>
+
                 </div>
+
             </div>
 
+
+
             <h2 class="text-lg font-bold text-gray-700 mb-3 pl-1">取引明細</h2>
+
             <div id="history-list" class="space-y-2 mb-4">
+
                 </div>
+
         </div>
+
+
+
 
 
         <div id="page-wallets" class="p-4 flex-1 overflow-y-auto pb-28 hidden animate-fade-in">
+
             <h1 class="text-2xl font-bold text-gray-800 mb-5">👛 残高・ウォレット</h1>
 
+
+
             <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3.5 pl-1">現在のお財布一覧</h2>
+
             
+
             <div class="space-y-3.5">
+
                 <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
+
                     <div class="flex items-center gap-4">
+
                         <div class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center text-xl border border-gray-200/50">🏦</div>
+
                         <div>
+
                             <div class="text-base font-bold text-gray-800">通常（現金・銀行）</div>
+
                             <div class="text-[11px] text-gray-400">メインの資金口座残高</div>
+
                         </div>
+
                     </div>
+
                     <span id="normal-balance" class="text-xl font-extrabold text-slate-700 tracking-tight">¥0</span>
+
                 </div>
 
+
+
                 <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
+
                     <div class="flex items-center gap-4">
+
                         <img src="https://iconlab.kentakomiya.com/wp/wp-content/uploads/2019/06/icon0084.png" alt="PayPay" class="w-11 h-11 object-contain rounded-full border border-gray-100 p-0.5 bg-white">
+
                         <div>
+
                             <div class="text-base font-bold text-gray-800">PayPay残高</div>
+
                             <div class="text-[11px] text-gray-400">チャージと決済の自動連動</div>
+
                         </div>
+
                     </div>
+
                     <span id="paypay-balance" class="text-xl font-extrabold text-purple-600 tracking-tight">¥0</span>
+
                 </div>
 
+
+
                 <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
+
                     <div class="flex items-center gap-4">
+
                         <img src="https://play-lh.googleusercontent.com/XWuB3KQHW8BqGA4lAo60n8A0Syz2LQXEgXPQuvEps_R_47jnnVauzhoHLvRP7CT0w-Ai-Ug7IHhVd_yUiVYu" alt="モバイルSuica" class="w-11 h-11 object-contain rounded-full border border-gray-100 p-0.5 bg-white">
+
                         <div>
+
                             <div class="text-base font-bold text-gray-800">モバイルSuica</div>
+
                             <div class="text-[11px] text-gray-400">チャージと利用の自動連動</div>
+
                         </div>
+
                     </div>
+
                     <span id="suica-balance" class="text-xl font-extrabold text-emerald-600 tracking-tight">¥0</span>
+
                 </div>
+
             </div>
+
         </div>
+
+
 
         <div id="page-data-admin" class="p-4 flex-1 overflow-y-auto pb-28 hidden animate-fade-in">
+
             <h1 class="text-2xl font-bold text-gray-800 mb-6">⚙️ データ管理</h1>
 
+
+
             <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
+
                 <h3 class="text-sm font-bold text-gray-600 mb-1">バックアップと復元</h3>
+
                 <p class="text-xs text-gray-500 leading-relaxed">全てのデータをJSONファイルとしてダウンロード保存・復元できます。定期的なバックアップを推奨します。</p>
+
                 
+
                 <hr class="border-gray-200">
+
                 
+
                 <div class="flex flex-col gap-3">
+
                     <button onclick="exportData()" class="w-full bg-slate-800 hover:bg-slate-900 text-white text-sm py-3 rounded-xl shadow-sm font-medium transition-colors">
+
                         📥 今のデータをバックアップ保存
+
                     </button>
+
                     <button onclick="document.getElementById('import-file').click()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-3 rounded-xl shadow-xs font-medium transition-colors">
+
                         📤 ファイルからデータを復元
+
                     </button>
+
                     <input type="file" id="import-file" onchange="importData(event)" class="hidden" accept=".json">
+
                 </div>
+
             </div>
+
         </div>
+
+
+
 
 
         <div class="border-t border-gray-200 bg-white flex justify-around py-3 bg-gray-50/95 backdrop-blur-md shadow-[0_-3px_10px_rgba(0,0,0,0.03)] z-40">
+
             <button id="btn-nav-kakeibo" onclick="switchPage('kakeibo')" class="flex flex-col items-center gap-1.5 flex-1 transition-colors text-blue-600">
+
                 <span class="text-xl">📝</span>
+
                 <span class="text-[11px] font-bold">家計簿</span>
+
             </button>
+
             <button id="btn-nav-wallets" onclick="switchPage('wallets')" class="flex flex-col items-center gap-1.5 flex-1 transition-colors text-gray-400">
+
                 <span class="text-xl">👛</span>
+
                 <span class="text-[11px] font-bold">決済残高</span>
+
             </button>
+
             <button id="btn-nav-data-admin" onclick="switchPage('data-admin')" class="flex flex-col items-center gap-1.5 flex-1 transition-colors text-gray-400">
+
                 <span class="text-xl">⚙️</span>
+
                 <span class="text-[11px] font-bold">データ管理</span>
+
             </button>
+
         </div>
+
+
+
 
 
         <button id="floating-plus-btn" onclick="toggleModal(true)" class="absolute bottom-20 right-6 bg-blue-600 text-white w-14 h-14 rounded-full shadow-xl flex items-center justify-center text-3xl font-light hover:bg-blue-700 focus:outline-none z-40 transition-transform active:scale-95 animate-fade-in">
+
             ＋
+
         </button>
 
+
+
         <div id="input-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+
             <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+
                 <h3 class="text-lg font-bold text-gray-800 mb-4">明細の追加</h3>
+
                 
+
                 <div class="flex gap-2 mb-4 bg-gray-100 p-1 rounded-lg">
+
                     <label class="flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs transition-colors" id="label-expense">
+
                         <input type="radio" name="type" value="expense" checked onchange="switchType('expense')" class="hidden"> 支出
+
                     </label>
+
                     <label class="flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs transition-colors" id="label-transfer">
+
                         <input type="radio" name="type" value="transfer" onchange="switchType('transfer')" class="hidden"> 振替
+
                     </label>
+
                     <label class="flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs transition-colors" id="label-income">
+
                         <input type="radio" name="type" value="income" onchange="switchType('income')" class="hidden"> 収入
+
                     </label>
+
                 </div>
 
+
+
                 <div class="mb-3">
+
                     <label class="block text-xs text-gray-500 mb-1">年月日</label>
+
                     <input type="date" id="input-date" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
                 </div>
 
+
+
                 <div class="mb-3">
+
                     <label class="block text-xs text-gray-500 mb-1">科目</label>
+
                     <select id="input-category" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
                     </select>
+
                 </div>
+
+
 
                 <div class="mb-3" id="payment-method-container">
+
                     <label class="block text-xs text-gray-500 mb-1">支払方法</label>
+
                     <select id="input-payment" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
                         <option value="cash">通常（現金・クレジットカード等）</option>
+
                         <option value="paypay">PayPay</option>
+
                         <option value="suica">モバイルSuica</option>
+
                     </select>
+
                 </div>
+
+
 
                 <div class="mb-3">
+
                     <label class="block text-xs text-gray-500 mb-1">金額 (円)</label>
+
                     <input type="text" id="input-amount" placeholder="0" oninput="formatAmountInput(this)" inputmode="numeric" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
                 </div>
+
+
 
                 <div class="mb-5">
+
                     <label class="block text-xs text-gray-500 mb-1">概要</label>
+
                     <input type="text" id="input-summary" placeholder="（任意）" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+
                 </div>
 
+
+
                 <div class="flex justify-end gap-2">
+
                     <button onclick="toggleModal(false)" class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">キャンセル</button>
+
                     <button onclick="saveTransaction()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">保存</button>
+
                 </div>
+
             </div>
+
         </div>
+
+
 
     </div>
 
+
+
     <script>
+
         const INCOME_CATEGORIES = ["基本給", "役職手当", "時間外手当", "夜勤手当", "賞与", "その他"];
+
         const EXPENSE_CATEGORIES = [
+
             "住宅費", "水道光熱費", "通信費", "税金", "社会保険料", 
+
             "保険料", "労働関係費", "株式投資費", "貯蓄（財形）", "食費", 
+
             "交際費", "交通費", "教育・教養費", "医療費", "日用品費", 
+
             "娯楽費", "その他支出"
+
         ];
+
         const TRANSFER_CATEGORIES = ["PayPayへチャージ", "モバイルSuicaへチャージ", "その他口座間振替"];
 
+
+
         const STORAGE_KEY = 'my_kakeibo_core_data';
+
         let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+
         
+
         let currentChartTab = 'expense'; 
+
         let expenseChart = null;
+
         let savingsChart = null;
+
         let balanceChart = null;
 
+
+
         // 初期化
+
         document.getElementById('input-date').value = new Date().toISOString().substring(0, 10);
+
         switchType('expense');
+
         updateMonthFilterOptions();
+
         switchPage('kakeibo'); 
+
         updateUI();
 
+
+
         // 金額入力欄をリアルタイムにコンマ区切りにする関数
+
         function formatAmountInput(el) {
+
             let value = el.value.replace(/[^0-9]/g, '');
+
             if (value === '') {
+
                 el.value = '';
+
                 return;
+
             }
+
             el.value = parseInt(value, 10).toLocaleString();
+
         }
+
+
 
         // ページ切り替え
+
         function switchPage(page) {
+
             const pageKakeibo = document.getElementById('page-kakeibo');
+
             const pageWallets = document.getElementById('page-wallets');
+
             const pageDataAdmin = document.getElementById('page-data-admin');
+
             const btnKakeibo = document.getElementById('btn-nav-kakeibo');
+
             const btnWallets = document.getElementById('btn-nav-wallets');
+
             const btnDataAdmin = document.getElementById('btn-nav-data-admin');
+
             const floatingPlus = document.getElementById('floating-plus-btn');
 
+
+
             const pages = [pageKakeibo, pageWallets, pageDataAdmin];
+
             const btns = [btnKakeibo, btnWallets, btnDataAdmin];
+
             pages.forEach(p => p.classList.add('hidden'));
+
             btns.forEach(b => b.className = "flex flex-col items-center gap-1.5 flex-1 transition-colors text-gray-400");
+
             floatingPlus.classList.add('hidden');
 
+
+
             if (page === 'kakeibo') {
+
                 pageKakeibo.classList.remove('hidden');
+
                 floatingPlus.classList.remove('hidden');
+
                 btnKakeibo.className = "flex flex-col items-center gap-1.5 flex-1 transition-colors text-blue-600 font-bold text-xs";
+
             } else if (page === 'wallets') {
+
                 pageWallets.classList.remove('hidden');
+
                 btnWallets.className = "flex flex-col items-center gap-1.5 flex-1 transition-colors text-purple-600 font-bold text-xs";
+
             } else if (page === 'data-admin') {
+
                 pageDataAdmin.classList.remove('hidden');
+
                 btnDataAdmin.className = "flex flex-col items-center gap-1.5 flex-1 transition-colors text-gray-700 font-bold text-xs";
+
             }
+
         }
 
+
+
         // 25日基準の月度判定
+
         function getBudgetMonth(dateStr) {
+
             if (!dateStr) return "";
+
             const d = new Date(dateStr);
+
             if (isNaN(d.getTime())) return "";
+
             let year = d.getFullYear();
+
             let month = d.getMonth() + 1;
+
             const day = d.getDate();
+
+
 
             const isSpecialPeriod = (dateStr >= "2026-06-20" && dateStr <= "2026-06-24");
 
+
+
             if (day >= 25 || isSpecialPeriod) {
+
                 month += 1;
+
                 if (month > 12) { month = 1; year += 1; }
+
             }
+
             return `${year}-${String(month).padStart(2, '0')}`;
+
         }
+
+
 
         // バックアップ・復元
+
         function exportData() {
+
             if (transactions.length === 0) return alert('出力するデータがありません。');
+
             const dataStr = JSON.stringify(transactions, null, 2);
+
             const blob = new Blob([dataStr], { type: 'application/json' });
+
             const url = URL.createObjectURL(blob);
+
             const a = document.createElement('a');
+
             a.href = url;
+
             a.download = `kakeibo_backup_${new Date().toISOString().substring(0,10)}.json`;
+
             a.click();
+
             URL.revokeObjectURL(url);
+
         }
+
+
 
         function importData(event) {
+
             const file = event.target.files[0];
+
             if (!file) return;
+
             const reader = new FileReader();
+
             reader.onload = function(e) {
+
                 try {
+
                     const imported = JSON.parse(e.target.result);
+
                     if (Array.isArray(imported)) {
+
                         if (confirm('データを復元しますか？（現在のデータは上書きされます）')) {
+
                             transactions = imported;
+
                             localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+
                             updateMonthFilterOptions();
+
                             updateUI();
+
                             alert('データの復元が完了しました！');
+
                         }
+
                     } else {
+
                         alert('正しいバックアップファイルではありません。');
+
                     }
+
                 } catch (err) {
+
                     alert('ファイルの読み込みに失敗しました。');
+
                 }
+
             };
+
             reader.readAsText(file);
+
             event.target.value = '';
+
         }
+
+
 
         function toggleModal(show) {
+
             const modal = document.getElementById('input-modal');
+
             if (show) modal.classList.remove('hidden');
+
             else modal.classList.add('hidden');
+
         }
+
+
 
         function switchType(type) {
+
             const catSelect = document.getElementById('input-category');
+
             const lblExpense = document.getElementById('label-expense');
+
             const lblTransfer = document.getElementById('label-transfer');
+
             const lblIncome = document.getElementById('label-income');
+
             const paymentContainer = document.getElementById('payment-method-container');
+
             
+
             catSelect.innerHTML = '';
+
             lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
+
             lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
+
             lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
+
             
+
             if (type === 'expense') {
+
                 EXPENSE_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
+
                 lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-red-600 shadow-xs";
+
                 paymentContainer.classList.remove('hidden');
+
             } else if (type === 'transfer') {
+
                 TRANSFER_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
+
                 lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-purple-600 shadow-xs";
+
                 paymentContainer.classList.add('hidden');
+
             } else {
+
                 INCOME_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
+
                 lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-green-600 shadow-xs";
+
                 paymentContainer.classList.add('hidden');
+
             }
+
         }
+
+
 
         function switchChartTab(tab) {
+
             currentChartTab = tab;
+
             updateUI();
+
         }
+
+
 
         function saveTransaction() {
+
             const type = document.querySelector('input[name="type"]:checked').value;
+
             const date = document.getElementById('input-date').value;
+
             const category = document.getElementById('input-category').value;
+
             const amountInputStr = document.getElementById('input-amount').value; 
+
             const summary = document.getElementById('input-summary').value;
+
             const payment = document.getElementById('input-payment').value;
 
+
+
             if (!date) return alert('日付を選択してください');
+
             
+
             const amount = parseInt(amountInputStr.replace(/,/g, ''), 10) || 0;
+
             if (amount <= 0) return alert('金額を正しく入力してください');
 
+
+
             const newTx = {
+
                 id: Date.now(),
+
                 date: date,
+
                 category: category,
+
                 summary: summary || category,
+
                 type: type, 
+
                 income: type === 'income' ? amount : 0,
+
                 expense: type === 'expense' ? amount : 0,
+
                 amount: amount,
+
                 payment: type === 'expense' ? payment : 'cash'
+
             };
+
+
 
             transactions.push(newTx);
+
             localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
 
+
+
             document.getElementById('input-amount').value = '';
+
             document.getElementById('input-summary').value = '';
+
             document.getElementById('input-payment').value = 'cash';
+
             toggleModal(false);
 
+
+
             const targetBudgetMonth = getBudgetMonth(date);
+
             updateMonthFilterOptions(targetBudgetMonth);
+
             updateUI();
+
         }
+
+
 
         function deleteTransaction(id) {
+
             if (confirm('この明細を削除しますか？')) {
+
                 transactions = transactions.filter(tx => tx.id !== id);
+
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+
                 updateMonthFilterOptions(document.getElementById('month-filter').value);
+
                 updateUI();
+
             }
+
         }
+
+
 
         function updateMonthFilterOptions(selectTarget = null) {
+
             const filterSelect = document.getElementById('month-filter');
+
             const currentSelected = selectTarget || filterSelect.value || 'all';
+
             const budgetMonths = [...new Set(transactions.map(tx => getBudgetMonth(tx.date)))].filter(m => m).sort((a, b) => b.localeCompare(a));
 
+
+
             filterSelect.innerHTML = '<option value="all">全期間</option>';
+
             budgetMonths.forEach(m => {
+
                 const p = m.split('-');
+
                 filterSelect.add(new Option(`${p[0]}年${p[1]}月度`, m));
+
             });
+
+
 
             if (budgetMonths.includes(currentSelected) || currentSelected === 'all') {
+
                 filterSelect.value = currentSelected;
+
             } else if (budgetMonths.length > 0) {
+
                 filterSelect.value = budgetMonths[0];
+
             } else {
+
                 filterSelect.value = 'all';
+
             }
+
         }
+
+
 
         function changeMonthFilter() {
+
             updateUI();
+
         }
+
+
 
         function updateUI() {
+
             const currentBudgetMonth = document.getElementById('month-filter').value;
+
             const container = document.getElementById('chart-container');
 
+
+
             if (transactions.length === 0) {
+
                 container.classList.add('hidden');
+
             } else {
+
                 container.classList.remove('hidden');
+
             }
+
+
 
             // 各お財布のベース値（初期状態）をセット
+
             let normalBalance = 0;
+
             let paypayBalance = 2340; 
+
             let suicaBalance = 2542;  
 
+
+
             const chronologicalTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
             chronologicalTxs.forEach(tx => {
+
                 const txType = tx.type || (tx.income > 0 ? 'income' : 'expense');
+
                 const amt = tx.amount || tx.income || tx.expense || 0;
 
+
+
                 if (txType === 'income') {
+
                     normalBalance += tx.income;
+
                 } else if (txType === 'expense') {
+
                     if (tx.payment === 'paypay') paypayBalance -= tx.expense;
+
                     else if (tx.payment === 'suica') suicaBalance -= tx.expense;
+
                     else normalBalance -= tx.expense;
+
                 } else if (txType === 'transfer') {
+
                     if (tx.category === 'PayPayへチャージ') {
+
                         normalBalance -= amt;
+
                         paypayBalance += amt;
+
                     } else if (tx.category === 'モバイルSuicaへチャージ') {
+
                         normalBalance -= amt;
+
                         suicaBalance += amt; 
+
                     }
+
                 }
+
             });
+
+
 
             // 残高画面の各カードへ反映
+
             document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
+
             document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
+
             document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
 
+
+
             // 【修正】HTML側に要素が不足していた全期間・年度残高の更新処理をエラーなく動くように保護
+
             let allTimeBalance = 0;
+
             transactions.forEach(tx => { allTimeBalance += (tx.income - tx.expense); });
 
+
+
             let targetBudgetMonth = currentBudgetMonth === 'all' ? getBudgetMonth(new Date().toISOString().substring(0, 10)) : currentBudgetMonth;
+
             let targetYear = null;
+
             if (targetBudgetMonth) {
+
                 const [y, m] = targetBudgetMonth.split('-').map(Number);
+
                 targetYear = m <= 3 ? y - 1 : y;
+
             }
+
+
 
             let yearBalance = 0;
+
             if (targetYear !== null) {
+
                 transactions.forEach(tx => {
+
                     const txBudgetMonth = getBudgetMonth(tx.date);
+
                     if (txBudgetMonth) {
+
                         const [y, m] = txBudgetMonth.split('-').map(Number);
+
                         if ((m <= 3 ? y - 1 : y) === targetYear) { yearBalance += (tx.income - tx.expense); }
+
                     }
+
                 });
+
             }
+
+
 
             if(document.getElementById('all-time-balance')) {
+
                 document.getElementById('all-time-balance').innerText = `¥${allTimeBalance.toLocaleString()}`;
+
                 document.getElementById('year-balance').innerText = `¥${yearBalance.toLocaleString()}`;
+
                 document.getElementById('fiscal-year-label').innerText = targetYear || "----";
+
             }
+
+
 
             // 明細データのフィルタリングとサマリー計算
+
             const filteredTxs = transactions.filter(tx => {
+
                 if (currentBudgetMonth === 'all') return true;
+
                 return getBudgetMonth(tx.date) === currentBudgetMonth;
+
             }).sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
 
+
+
             let totalIncome = 0;
+
             let totalExpense = 0;
+
             const expenseMap = {};
 
+
+
             const historyList = document.getElementById('history-list');
+
             historyList.innerHTML = '';
 
+
+
             filteredTxs.forEach(tx => {
+
                 totalIncome += tx.income;
+
                 totalExpense += tx.expense;
+
                 if (tx.expense > 0) {
+
                     expenseMap[tx.category] = (expenseMap[tx.category] || 0) + tx.expense;
+
                 }
+
+
 
                 const txType = tx.type || (tx.income > 0 ? 'income' : 'expense');
+
                 let amtText = "";
+
                 let amtColor = "";
+
                 let paymentLabel = "";
 
+
+
                 if (txType === 'income') {
+
                     amtText = `+¥${tx.income.toLocaleString()}`;
+
                     amtColor = 'text-green-600';
+
                 } else if (txType === 'expense') {
+
                     amtText = `-¥${tx.expense.toLocaleString()}`;
+
                     amtColor = 'text-red-600';
+
                     if (tx.payment === 'paypay') paymentLabel = " <span class='text-[10px] bg-purple-50 text-purple-500 px-1.5 py-0.5 rounded ml-1 font-normal'>PayPay</span>";
+
                     if (tx.payment === 'suica') paymentLabel = " <span class='text-[10px] bg-emerald-50 text-emerald-500 px-1.5 py-0.5 rounded ml-1 font-normal'>Suica</span>";
+
                 } else if (txType === 'transfer') {
+
                     const amt = tx.amount || tx.income || tx.expense || 0;
+
                     amtText = `➔ ¥${amt.toLocaleString()}`;
+
                     amtColor = 'text-purple-600';
+
                 }
+
+
 
                 const card = document.createElement('div');
+
                 card.className = "bg-white border border-gray-100 rounded-xl p-3 shadow-xs flex justify-between items-center hover:bg-gray-50 transition-colors";
+
                 card.innerHTML = `
+
                     <div onclick="deleteTransaction(${tx.id})" class="flex-1 cursor-pointer">
+
                         <div class="text-xs text-gray-400">${tx.date}  【${tx.category}】</div>
+
                         <div class="text-base font-medium text-gray-800">${tx.summary}${paymentLabel}</div>
+
                     </div>
+
                     <div class="text-base font-bold ${amtColor}">${amtText}</div>
+
                 `;
+
                 historyList.appendChild(card);
+
             });
+
+
 
             const balance = totalIncome - totalExpense;
+
             document.getElementById('total-income').innerText = `¥${totalIncome.toLocaleString()}`;
+
             document.getElementById('total-expense').innerText = `¥${totalExpense.toLocaleString()}`;
+
             document.getElementById('total-balance').innerText = `¥${balance.toLocaleString()}`;
 
+
+
             renderCharts(expenseMap);
+
         }
+
+
 
         function renderCharts(expenseMap) {
+
             const tabs = {
+
                 expense: { btn: 'tab-expense', wrapper: 'expense-chart-wrapper' },
+
                 savings: { btn: 'tab-savings', wrapper: 'savings-chart-wrapper' },
+
                 balance: { btn: 'tab-balance', wrapper: 'balance-chart-wrapper' }
+
             };
 
+
+
             Object.keys(tabs).forEach(t => {
+
                 const btn = document.getElementById(tabs[t].btn);
+
                 const wrapper = document.getElementById(tabs[t].wrapper);
+
                 if (t === currentChartTab) {
+
                     btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-bold bg-white text-gray-800 shadow-xs";
+
                     wrapper.classList.remove('hidden');
+
                 } else {
+
                     btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500";
+
                     wrapper.classList.add('hidden');
+
                 }
+
             });
 
+
+
             if (currentChartTab === 'expense') {
+
                 drawExpenseChart(expenseMap);
+
             } else if (currentChartTab === 'savings') {
+
                 drawSavingsChart();
+
             } else if (currentChartTab === 'balance') {
+
                 drawBalanceChart();
+
             }
+
         }
+
 
 
         function drawExpenseChart(expenseMap) {
+
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            const keys = Object.keys(expenseMap);
+
+            const canvasEl = document.getElementById('expenseChart');
+
+            const emptyMsg = document.getElementById('expense-empty-msg');
+
+            const labels = Object.keys(expenseMap);
+
             const data = Object.values(expenseMap);
-            const total = data.reduce((s, v) => s + v, 0);
+
+
+
+            if (labels.length === 0) {
+
+                canvasEl.classList.add('hidden');
+
+                emptyMsg.classList.remove('hidden');
+
+                return;
+
+            }
+
+            canvasEl.classList.remove('hidden');
+
+            emptyMsg.classList.add('hidden');
+
+
 
             if (expenseChart) expenseChart.destroy();
 
+
+
             expenseChart = new Chart(ctx, {
+
                 type: 'doughnut',
-                plugins: [ChartDataLabels], // ★ここが追加されました
+
                 data: {
-                    labels: keys, 
+
+                    labels: labels,
+
                     datasets: [{
-                    data: data,
-                    backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899']
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
-                    tooltip: { 
-                        callbacks: {
-                            label: (c) => `${c.label}: ${c.raw.toLocaleString()}円 (${((c.raw/total)*100).toFixed(1)}%)` // ★金額に「円」追加
-                        }
-                    },
-                    datalabels: { // ★パーツ上に％を表示する設定
-                        color: '#fff',
-                        font: { weight: 'bold', size: 10 },
-                        formatter: (v) => (total > 0 ? Math.round((v/total)*100) + '%' : '')
-                    }
+
+                        data: data,
+
+                        backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
+
+                        borderWidth: 1
+
+                    }]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
+
                 }
-            }
-        });
-    }
+
+            });
+
+        }
+
+
 
         function drawSavingsChart() {
+
             const ctx = document.getElementById('savingsChart').getContext('2d');
+
             const canvasEl = document.getElementById('savingsChart');
+
             const emptyMsg = document.getElementById('savings-empty-msg');
 
+
+
             const hasSavings = transactions.some(tx => tx.category === '貯蓄（財形）');
+
             if (!hasSavings) {
+
                 canvasEl.classList.add('hidden');
+
                 emptyMsg.classList.remove('hidden');
+
                 return;
+
             }
+
             canvasEl.classList.remove('hidden');
+
             emptyMsg.classList.add('hidden');
 
+
+
             const sortedTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
             let runningSavings = 0;
+
             const monthlySavings = {};
 
+
+
             sortedTxs.forEach(tx => {
+
                 if (tx.category === '貯蓄（財形）') { runningSavings += tx.expense; }
+
                 const budgetMonth = getBudgetMonth(tx.date);
+
                 if (budgetMonth) { monthlySavings[budgetMonth] = runningSavings; }
+
             });
 
+
+
             const sortedMonths = Object.keys(monthlySavings).sort();
+
             const dataValues = sortedMonths.map(m => monthlySavings[m]);
+
             const displayLabels = sortedMonths.map(m => {
+
                 const p = m.split('-');
+
                 return `${p[1]}月度`;
+
             });
+
+
 
             if (savingsChart) savingsChart.destroy();
 
+
+
             savingsChart = new Chart(ctx, {
+
                 type: 'line',
+
                 data: {
+
                     labels: displayLabels,
+
                     datasets: [{
+
                         label: '財形貯蓄 累計残高',
+
                         data: dataValues,
+
                         borderColor: '#10b981',
+
                         backgroundColor: 'rgba(16, 185, 129, 0.08)',
+
                         borderWidth: 2,
+
                         tension: 0.2,
+
                         pointBackgroundColor: '#10b981',
+
                         pointRadius: 4,
+
                         fill: true
+
                     }]
+
                 },
+
                 options: {
+
                     responsive: true,
+
                     scales: {
+
                         y: { ticks: { font: { size: 9 }, callback: value => '¥' + value.toLocaleString() } },
+
                         x: { ticks: { font: { size: 9 } } }
+
                     },
+
                     plugins: { legend: { display: false } }
+
                 }
+
             });
+
         }
 
+
+
         function drawBalanceChart() {
+
             const ctx = document.getElementById('balanceChart').getContext('2d');
+
             const sortedTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+
             
+
             let runningBalance = 2340 + 2542;
+
             const monthlyBalances = {};
 
+
+
             sortedTxs.forEach(tx => {
+
                 if (tx.type === 'income') {
+
                     runningBalance += tx.income;
+
                 } else if (tx.type === 'expense') {
+
                     runningBalance -= tx.expense;
+
                 }
+
                 const budgetMonth = getBudgetMonth(tx.date);
+
                 if (budgetMonth) { monthlyBalances[budgetMonth] = runningBalance; }
+
             });
 
+
+
             const sortedMonths = Object.keys(monthlyBalances).sort();
+
             const dataValues = sortedMonths.map(m => monthlyBalances[m]);
+
             const displayLabels = sortedMonths.map(m => {
+
                 const p = m.split('-');
+
                 return `${p[0].substring(2)}年${p[1]}月度`;
+
             });
+
+
 
             if (balanceChart) balanceChart.destroy();
 
+
+
             balanceChart = new Chart(ctx, {
+
                 type: 'bar',
+
                 data: {
+
                     labels: displayLabels,
+
                     datasets: [{
+
                         label: '全体月度残金',
+
                         data: dataValues,
+
                         backgroundColor: 'rgba(59, 130, 246, 0.75)',
+
                         borderColor: '#3b82f6',
+
                         borderWidth: 1,
+
                         borderRadius: 4
+
                     }]
+
                 },
+
                 options: {
+
                     responsive: true,
+
                     layout: { padding: { top: 25 } },
+
                     scales: {
+
                         y: { display: false },
+
                         x: { ticks: { font: { size: 9 } }, grid: { display: false } }
+
                     },
+
                     plugins: { legend: { display: false } }
+
                 },
+
                 plugins: [{
+
                     id: 'barValueLabels',
+
                     afterDatasetsDraw: function(chart) {
+
                         const ctx = chart.ctx;
+
                         chart.data.datasets.forEach(function(dataset, i) {
+
                             const meta = chart.getDatasetMeta(i);
+
                             meta.data.forEach(function(bar, index) {
+
                                 const data = dataset.data[index];
+
                                 ctx.fillStyle = '#1e293b'; 
+
                                 ctx.font = 'bold 10px sans-serif';
+
                                 ctx.textAlign = 'center';
+
                                 ctx.textBaseline = 'bottom';
+
                                 ctx.fillText('¥' + data.toLocaleString(), bar.x, bar.y - 4);
+
                             });
+
                         });
+
                     }
+
                 }]
+
             });
+
         }
+
     </script>
+
 </body>
+
 </html>
