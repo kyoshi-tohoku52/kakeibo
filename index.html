@@ -619,46 +619,47 @@
                 drawBalanceChart();
             }
         }
-function drawExpenseChart(expenseMap) {
-                const ctx = document.getElementById('expenseChart').getContext('2d');
-                const keys = Object.keys(expenseMap);
-                const data = Object.values(expenseMap);
-                const total = data.reduce((s, v) => s + v, 0);
 
-                if(expenseChart) expenseChart.destroy();
+        function drawExpenseChart(expenseMap) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            const keys = Object.keys(expenseMap);
+            const data = Object.values(expenseMap);
+            const total = data.reduce((s, v) => s + v, 0);
 
-                expenseChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    plugins: [ChartDataLabels], // プラグインを登録
-                    data: {
-                        labels: keys, // 凡例には名前だけ表示
-                        datasets: [{
-                            data: data,
-                            backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
-                            tooltip: { // ポップアップのカスタマイズ
-                                callbacks: {
-                                    label: function(c) {
-                                        const val = c.raw;
-                                        const pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
-                                        return `${c.label}: ${val.toLocaleString()}円 (${pct}%)`;
-                                    }
+            if(expenseChart) expenseChart.destroy();
+
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                plugins: [ChartDataLabels], // プラグインを読み込み
+                data: {
+                    labels: keys, // 凡例には名前だけ表示
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
+                        tooltip: { 
+                            callbacks: {
+                                label: function(c) {
+                                    const val = c.raw;
+                                    const pct = total > 0 ? ((val/total)*100).toFixed(1) : 0;
+                                    return `${c.label}: ${val.toLocaleString()}円 (${pct}%)`; // 数字の後ろに「円」を表示
                                 }
-                            },
-                            datalabels: { // パーツ上に％を表示
-                                color: '#fff',
-                                font: { weight: 'bold', size: 10 },
-                                formatter: (val) => (total > 0 ? Math.round((val/total)*100) + '%' : '')
                             }
+                        },
+                        datalabels: { // パーツ上に％を表示
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (val) => (total > 0 ? Math.round((val/total)*100) + '%' : '')
                         }
                     }
-                });
-            }
+                }
+            });
+        }
 
         function drawSavingsChart() {
             const ctx = document.getElementById('savingsChart').getContext('2d');
