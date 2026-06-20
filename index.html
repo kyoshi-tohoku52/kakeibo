@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>家計簿</title>
+    <title>マイ家計簿 Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -37,6 +37,12 @@
             </div>
 
             <div class="bg-slate-900 text-white rounded-2xl p-4 mb-5 shadow-md border border-slate-800/30">
+                
+                <div class="flex justify-between text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-xl border border-slate-800/50">
+                    <div>資産総額(全期間): <span id="all-time-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+                    <div><span id="fiscal-year-label">----</span>年度残高: <span id="year-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+                </div>
+
                 <div class="flex justify-between items-center mb-2">
                     <span class="text-sm text-slate-400">選択月の純収支</span>
                     <span id="total-balance" class="text-2xl font-bold text-blue-400">¥0</span>
@@ -252,15 +258,13 @@
         switchPage('kakeibo'); 
         updateUI();
 
-        // ★新設：金額入力欄をリアルタイムにコンマ区切りにする関数
+        // 金額入力欄をリアルタイムにコンマ区切りにする関数
         function formatAmountInput(el) {
-            // 数字以外の文字（以前入ったコンマなど）をすべて消去
             let value = el.value.replace(/[^0-9]/g, '');
             if (value === '') {
                 el.value = '';
                 return;
             }
-            // 3桁ずつの半角コンマ区切りテキストに変換してはめ直す
             el.value = parseInt(value, 10).toLocaleString();
         }
 
@@ -392,13 +396,12 @@
             const type = document.querySelector('input[name="type"]:checked').value;
             const date = document.getElementById('input-date').value;
             const category = document.getElementById('input-category').value;
-            const amountInputStr = document.getElementById('input-amount').value; // ★コンマ付き文字列を取得
+            const amountInputStr = document.getElementById('input-amount').value; 
             const summary = document.getElementById('input-summary').value;
             const payment = document.getElementById('input-payment').value;
 
             if (!date) return alert('日付を選択してください');
             
-            // ★【改良】計算のためにコンマを全て取り除いてから数値化
             const amount = parseInt(amountInputStr.replace(/,/g, ''), 10) || 0;
             if (amount <= 0) return alert('金額を正しく入力してください');
 
@@ -502,6 +505,33 @@
             document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
             document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
 
+            // 【修正】HTML側に要素が不足していた全期間・年度残高の更新処理をエラーなく動くように保護
+            let allTimeBalance = 0;
+            transactions.forEach(tx => { allTimeBalance += (tx.income - tx.expense); });
+
+            let targetBudgetMonth = currentBudgetMonth === 'all' ? getBudgetMonth(new Date().toISOString().substring(0, 10)) : currentBudgetMonth;
+            let targetYear = null;
+            if (targetBudgetMonth) {
+                const [y, m] = targetBudgetMonth.split('-').map(Number);
+                targetYear = m <= 3 ? y - 1 : y;
+            }
+
+            let yearBalance = 0;
+            if (targetYear !== null) {
+                transactions.forEach(tx => {
+                    const txBudgetMonth = getBudgetMonth(tx.date);
+                    if (txBudgetMonth) {
+                        const [y, m] = txBudgetMonth.split('-').map(Number);
+                        if ((m <= 3 ? y - 1 : y) === targetYear) { yearBalance += (tx.income - tx.expense); }
+                    }
+                });
+            }
+
+            if(document.getElementById('all-time-balance')) {
+                document.getElementById('all-time-balance').innerText = `¥${allTimeBalance.toLocaleString()}`;
+                document.getElementById('year-balance').innerText = `¥${yearBalance.toLocaleString()}`;
+                document.getElementById('fiscal-year-label').innerText = targetYear || "----";
+            }
 
             // 明細データのフィルタリングとサマリー計算
             const filteredTxs = transactions.filter(tx => {
