@@ -6,6 +6,7 @@
     <title>マイ家計簿 Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; }
         .scrollbar-none::-webkit-scrollbar { display: none; }
@@ -63,13 +64,13 @@
             <div id="chart-container" class="bg-gray-50 rounded-2xl p-4 mb-6 border border-gray-100 hidden relative">
                 
                 <div class="flex bg-gray-200 p-1 rounded-xl mb-4">
-                    <button id="tab-expense" onclick="switchChartTab('expense')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+                    <button id="tab-expense" onclick="switchChartTab('expense')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-bold bg-white text-gray-800 shadow-xs">
                         支出内訳
                     </button>
-                    <button id="tab-savings" onclick="switchChartTab('savings')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+                    <button id="tab-savings" onclick="switchChartTab('savings')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500">
                         財形推移
                     </button>
-                    <button id="tab-balance" onclick="switchChartTab('balance')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium transition-all scrollbar-none whitespace-nowrap overflow-x-auto">
+                    <button id="tab-balance" onclick="switchChartTab('balance')" class="flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500">
                         毎月度残金
                     </button>
                 </div>
@@ -473,7 +474,7 @@
                 container.classList.remove('hidden');
             }
 
-            // 各お財布のベース値（初期状態）をセット
+            // 各お財布のベース値
             let normalBalance = 0;
             let paypayBalance = 2340; 
             let suicaBalance = 2542;  
@@ -501,11 +502,13 @@
             });
 
             // 残高画面の各カードへ反映
-            document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
-            document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
-            document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
+            if(document.getElementById('normal-balance')) {
+                document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
+                document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
+                document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
+            }
 
-            // 【修正】HTML側に要素が不足していた全期間・年度残高の更新処理をエラーなく動くように保護
+            // 全期間・年度残高の更新
             let allTimeBalance = 0;
             transactions.forEach(tx => { allTimeBalance += (tx.income - tx.expense); });
 
@@ -533,7 +536,7 @@
                 document.getElementById('fiscal-year-label').innerText = targetYear || "----";
             }
 
-            // 明細データのフィルタリングとサマリー計算
+            // 明細データのフィルタリング
             const filteredTxs = transactions.filter(tx => {
                 if (currentBudgetMonth === 'all') return true;
                 return getBudgetMonth(tx.date) === currentBudgetMonth;
@@ -592,42 +595,15 @@
             renderCharts(expenseMap);
         }
 
-        function renderCharts(expenseMap) {
-            const tabs = {
-                expense: { btn: 'tab-expense', wrapper: 'expense-chart-wrapper' },
-                savings: { btn: 'tab-savings', wrapper: 'savings-chart-wrapper' },
-                balance: { btn: 'tab-balance', wrapper: 'balance-chart-wrapper' }
-            };
-
-            Object.keys(tabs).forEach(t => {
-                const btn = document.getElementById(tabs[t].btn);
-                const wrapper = document.getElementById(tabs[t].wrapper);
-                if (t === currentChartTab) {
-                    btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-bold bg-white text-gray-800 shadow-xs";
-                    wrapper.classList.remove('hidden');
-                } else {
-                    btn.className = "flex-1 text-center py-1.5 rounded-lg text-[10px] px-1 font-medium text-gray-500";
-                    wrapper.classList.add('hidden');
-                }
-            });
-
-            if (currentChartTab === 'expense') {
-                drawExpenseChart(expenseMap);
-            } else if (currentChartTab === 'savings') {
-                drawSavingsChart();
-            } else if (currentChartTab === 'balance') {
-                drawBalanceChart();
-            }
-        }
-
+        // ★【仕様変更】パーツ内％表示 ＆ カスタムポップアップの実装
         function drawExpenseChart(expenseMap) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
             const canvasEl = document.getElementById('expenseChart');
             const emptyMsg = document.getElementById('expense-empty-msg');
-            const labels = Object.keys(expenseMap);
+            const keys = Object.keys(expenseMap);
             const data = Object.values(expenseMap);
 
-            if (labels.length === 0) {
+            if (keys.length === 0) {
                 canvasEl.classList.add('hidden');
                 emptyMsg.classList.remove('hidden');
                 return;
@@ -635,12 +611,16 @@
             canvasEl.classList.remove('hidden');
             emptyMsg.classList.add('hidden');
 
+            const total = data.reduce((sum, val) => sum + val, 0);
+
             if (expenseChart) expenseChart.destroy();
 
             expenseChart = new Chart(ctx, {
                 type: 'doughnut',
+                // 重要：Chart.jsプラグイン（datalabels）を明示的にこのグラフに登録
+                plugins: [ChartDataLabels],
                 data: {
-                    labels: labels,
+                    labels: keys, // 【修正】下の凡例には「純粋な項目名」のみを設定（数字は入れない）
                     datasets: [{
                         data: data,
                         backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
@@ -649,7 +629,34 @@
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { boxWidth: 10, font: { size: 9 } } 
+                        },
+                        // 1. タッチ/ホバーした時のポップアップを「金額 ＆ 割合」にカスタマイズ
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw || 0;
+                                    const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                    return ` ¥${value.toLocaleString()} (${pct}%)`;
+                                }
+                            }
+                        },
+                        // 2. ドーナツのパーツの上に直接「％」を描画する設定
+                        datalabels: {
+                            color: '#ffffff', // パーツの上の文字色（白）
+                            font: {
+                                size: 10,
+                                weight: 'bold'
+                            },
+                            formatter: (value, ctx) => {
+                                const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+                                return pct > 4 ? `${pct}%` : ''; // 小さすぎるパーツ（4%以下）は文字を隠して綺麗に保つ
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -709,7 +716,7 @@
                         y: { ticks: { font: { size: 9 }, callback: value => '¥' + value.toLocaleString() } },
                         x: { ticks: { font: { size: 9 } } }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { legend: { display: false }, datalabels: { display: false } } // datalabelsをオフ
                 }
             });
         }
@@ -760,7 +767,7 @@
                         y: { display: false },
                         x: { ticks: { font: { size: 9 } }, grid: { display: false } }
                     },
-                    plugins: { legend: { display: false } }
+                    plugins: { legend: { display: false }, datalabels: { display: false } } // datalabelsをオフ
                 },
                 plugins: [{
                     id: 'barValueLabels',
