@@ -623,9 +623,20 @@
 
         function drawExpenseChart(expenseMap) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            const keys = Object.keys(expenseMap);
-            const data = Object.values(expenseMap);
-            const total = data.reduce((s, v) => s + v, 0);
+            //test//const keys = Object.keys(expenseMap);
+            //test//const data = Object.values(expenseMap);
+            //test//const total = data.reduce((s, v) => s + v, 0);
+            const sortedKeys = EXPENSE_CATEGORIES.filter(c => expenseMap[c] !== undefined);
+            const sortedData = sortedKeys.map(c => expenseMap[c]);
+            const total = sortedData.reduce((s, v) => s + v, 0);
+
+            if (sortedKeys.length === 0) {
+                document.getElementById('expenseChart').classList.add('hidden');
+                document.getElementById('expense-empty-msg').classList.remove('hidden');
+                return;
+            }
+            document.getElementById('expenseChart').classList.remove('hidden');
+            document.getElementById('expense-empty-msg').classList.add('hidden');
         
             if (expenseChart) expenseChart.destroy();
         
@@ -684,54 +695,6 @@
                 }
             });
         }
-
-        //test//function drawExpenseChart(expenseMap) {
-        //test//    const ctx = document.getElementById('expenseChart').getContext('2d');
-        //test//    const canvasEl = document.getElementById('expenseChart');
-        //test//    const emptyMsg = document.getElementById('expense-empty-msg');
-        //test//    const labels = Object.keys(expenseMap);
-        //test//    const data = Object.values(expenseMap);
-        //test//    const total = data.reduce((s, v) => s + v, 0);
-
-        //test//    if (labels.length === 0) {
-        //test//        canvasEl.classList.add('hidden');
-        //test//        emptyMsg.classList.remove('hidden');
-        //test//        return;
-        //test//    }
-        //test//    canvasEl.classList.remove('hidden');
-        //test//    emptyMsg.classList.add('hidden');
-
-        //test//    if (expenseChart) expenseChart.destroy();
-
-        //test//    expenseChart = new Chart(ctx, {
-        //test//        type: 'doughnut',
-        //test//        plugins: [ChartDataLabels], // ★ここが重要
-        //test//        data: {
-        //test//            labels: labels,
-        //test//            datasets: [{
-        //test//                data: data,
-        //test//                backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
-        //test//                borderWidth: 1
-        //test//            }]
-        //test//        },
-        //test//        options: {
-        //test//            responsive: true,
-        //test//            plugins: { 
-        //test//                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
-        //test//                tooltip: { // ★タッチ時に「金額＋円＋％」を表示
-        //test//                    callbacks: {
-        //test//                        label: (c) => `${c.label}: ${c.raw.toLocaleString()}円 (${((c.raw/total)*100).toFixed(1)}%)`
-        //test//                    }
-        //test//                },
-        //test//                datalabels: { // ★グラフ上に「％」を表示
-        //test//                    color: '#fff',
-        //test//                    font: { weight: 'bold', size: 10 },
-        //test//                    formatter: (v) => (total > 0 ? Math.round((v/total)*100) + '%' : '')
-        //test//                }
-        //test//            }
-        //test//        }
-        //test//    });
-        //test//}
 
         function drawSavingsChart() {
             const ctx = document.getElementById('savingsChart').getContext('2d');
