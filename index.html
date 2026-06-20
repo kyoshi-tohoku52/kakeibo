@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>マイ家計簿 Pro</title>
+    <title>家計簿</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -11,7 +11,7 @@
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* ★【新設】スマホ全体の誤スクロール・びよんとなるバウンスを完全にロックする極意 */
+        /* スマホ全体の誤スクロール・びよんとなるバウンスを完全にロック */
         html, body {
             overflow: hidden;
             height: 100vh;
@@ -210,7 +210,7 @@
 
                 <div class="mb-3">
                     <label class="block text-xs text-gray-500 mb-1">金額 (円)</label>
-                    <input type="number" id="input-amount" placeholder="0" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="input-amount" placeholder="0" oninput="formatAmountInput(this)" inputmode="numeric" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
 
                 <div class="mb-5">
@@ -251,6 +251,18 @@
         updateMonthFilterOptions();
         switchPage('kakeibo'); 
         updateUI();
+
+        // ★新設：金額入力欄をリアルタイムにコンマ区切りにする関数
+        function formatAmountInput(el) {
+            // 数字以外の文字（以前入ったコンマなど）をすべて消去
+            let value = el.value.replace(/[^0-9]/g, '');
+            if (value === '') {
+                el.value = '';
+                return;
+            }
+            // 3桁ずつの半角コンマ区切りテキストに変換してはめ直す
+            el.value = parseInt(value, 10).toLocaleString();
+        }
 
         // ページ切り替え
         function switchPage(page) {
@@ -380,11 +392,14 @@
             const type = document.querySelector('input[name="type"]:checked').value;
             const date = document.getElementById('input-date').value;
             const category = document.getElementById('input-category').value;
-            const amount = parseInt(document.getElementById('input-amount').value) || 0;
+            const amountInputStr = document.getElementById('input-amount').value; // ★コンマ付き文字列を取得
             const summary = document.getElementById('input-summary').value;
             const payment = document.getElementById('input-payment').value;
 
             if (!date) return alert('日付を選択してください');
+            
+            // ★【改良】計算のためにコンマを全て取り除いてから数値化
+            const amount = parseInt(amountInputStr.replace(/,/g, ''), 10) || 0;
             if (amount <= 0) return alert('金額を正しく入力してください');
 
             const newTx = {
