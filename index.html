@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>マイ家計簿 Pro</title>
+    <title>家計簿</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; }
         .scrollbar-none::-webkit-scrollbar { display: none; }
@@ -74,7 +75,7 @@
                     </button>
                 </div>
 
-                <div id="expense-chart-wrapper" class="w-full max-w-[220px] mx-auto hidden">
+                <div id="expense-chart-wrapper" class="w-full max-w-[220px] mx-auto">
                     <canvas id="expenseChart"></canvas>
                     <div id="expense-empty-msg" class="text-center text-sm text-gray-400 py-6 hidden">支出データがありません</div>
                 </div>
@@ -622,37 +623,115 @@
 
         function drawExpenseChart(expenseMap) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            const canvasEl = document.getElementById('expenseChart');
-            const emptyMsg = document.getElementById('expense-empty-msg');
-            const labels = Object.keys(expenseMap);
+            const keys = Object.keys(expenseMap);
             const data = Object.values(expenseMap);
-
-            if (labels.length === 0) {
-                canvasEl.classList.add('hidden');
-                emptyMsg.classList.remove('hidden');
-                return;
-            }
-            canvasEl.classList.remove('hidden');
-            emptyMsg.classList.add('hidden');
-
+            const total = data.reduce((s, v) => s + v, 0);
+        
             if (expenseChart) expenseChart.destroy();
-
+        
             expenseChart = new Chart(ctx, {
                 type: 'doughnut',
+                plugins: [ChartDataLabels, {
+                    id: 'centerText',
+                    // 描画タイミングを datasetsDraw の後にすることで、ポップアップが隠れないように調整
+                    afterDatasetsDraw: (chart) => {
+                        const { ctx, chartArea: { width, height, left, top } } = chart;
+                        ctx.save();
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const centerX = width / 2 + left;
+                        const centerY = height / 2 + top;
+                    
+                        // 支出総額のテキスト
+                        ctx.fillStyle = '#6b7280';
+                        ctx.font = '11px sans-serif';
+                        ctx.fillText('支出総額', centerX, centerY - 8);
+                    
+                        ctx.fillStyle = '#1f2937';
+                        ctx.font = 'bold 17px sans-serif';
+                        ctx.fillText('¥' + total.toLocaleString(), centerX, centerY + 10);
+
+                        ctx.restore();
+                    }
+                }],
                 data: {
-                    labels: labels,
+                    labels: keys,
                     datasets: [{
                         data: data,
                         backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
-                        borderWidth: 1
+                        borderWidth: 0,
+                        cutout: '50%'
                     }]
                 },
                 options: {
                     responsive: true,
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
+                    layout: { padding: 0 },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
+                        tooltip: { 
+                            enabled: true,
+                            position: 'nearest', // ツールチップの表示位置を安定させる
+                            callbacks: {
+                                label: (c) => `${c.label}: ${c.raw.toLocaleString()}円 (${((c.raw/total)*100).toFixed(1)}%)`
+                            }
+                        },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (v) => (total > 0 && (v/total) > 0.05 ? Math.round((v/total)*100) + '%' : '')
+                        }
+                    }
                 }
             });
         }
+
+        //test//function drawExpenseChart(expenseMap) {
+        //test//    const ctx = document.getElementById('expenseChart').getContext('2d');
+        //test//    const canvasEl = document.getElementById('expenseChart');
+        //test//    const emptyMsg = document.getElementById('expense-empty-msg');
+        //test//    const labels = Object.keys(expenseMap);
+        //test//    const data = Object.values(expenseMap);
+        //test//    const total = data.reduce((s, v) => s + v, 0);
+
+        //test//    if (labels.length === 0) {
+        //test//        canvasEl.classList.add('hidden');
+        //test//        emptyMsg.classList.remove('hidden');
+        //test//        return;
+        //test//    }
+        //test//    canvasEl.classList.remove('hidden');
+        //test//    emptyMsg.classList.add('hidden');
+
+        //test//    if (expenseChart) expenseChart.destroy();
+
+        //test//    expenseChart = new Chart(ctx, {
+        //test//        type: 'doughnut',
+        //test//        plugins: [ChartDataLabels], // ★ここが重要
+        //test//        data: {
+        //test//            labels: labels,
+        //test//            datasets: [{
+        //test//                data: data,
+        //test//                backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
+        //test//                borderWidth: 1
+        //test//            }]
+        //test//        },
+        //test//        options: {
+        //test//            responsive: true,
+        //test//            plugins: { 
+        //test//                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
+        //test//                tooltip: { // ★タッチ時に「金額＋円＋％」を表示
+        //test//                    callbacks: {
+        //test//                        label: (c) => `${c.label}: ${c.raw.toLocaleString()}円 (${((c.raw/total)*100).toFixed(1)}%)`
+        //test//                    }
+        //test//                },
+        //test//                datalabels: { // ★グラフ上に「％」を表示
+        //test//                    color: '#fff',
+        //test//                    font: { weight: 'bold', size: 10 },
+        //test//                    formatter: (v) => (total > 0 ? Math.round((v/total)*100) + '%' : '')
+        //test//                }
+        //test//            }
+        //test//        }
+        //test//    });
+        //test//}
 
         function drawSavingsChart() {
             const ctx = document.getElementById('savingsChart').getContext('2d');
