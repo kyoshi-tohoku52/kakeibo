@@ -225,9 +225,15 @@
                     <input type="text" id="input-summary" placeholder="（任意）" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
 
-                <div class="flex justify-end gap-2">
-                    <button onclick="toggleModal(false)" class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">キャンセル</button>
-                    <button onclick="saveTransaction()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">保存</button>
+                <div class="flex justify-between items-center gap-2 mt-6">
+                    <button id="btn-delete-tx" onclick="deleteFromModal()" class="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg hidden">
+                        削除
+                    </button>
+
+                    <div class="flex gap-2 ml-auto">
+                        <button onclick="toggleModal(false)" class="px-4 py-2 text-sm text-gray-500 hover:bg-gray-100 rounded-lg">キャンセル</button>
+                        <button onclick="saveTransaction()" class="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">保存</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -238,7 +244,7 @@
         const INCOME_CATEGORIES = ["基本給", "役職手当", "時間外手当", "夜勤手当", "賞与", "その他"];
         const EXPENSE_CATEGORIES = [
             "住宅費", "水道光熱費", "通信費", "税金", "社会保険料", 
-            "保険料", "労働関係費", "株式投資費", "貯蓄（財形）", "食費", 
+            "保険料", "労働関係費", "株式投資費", "貯蓄（財形）", "食費", "外食費", 
             "交際費", "交通費", "教育・教養費", "医療費", "日用品費", 
             "娯楽費", "その他支出"
         ];
@@ -355,10 +361,47 @@
             event.target.value = '';
         }
 
-        function toggleModal(show) {
+        // --- 追加: 編集用の状態管理 ---
+        let editingId = null;
+
+        // --- toggleModalを編集対応に拡張 ---
+        function toggleModal(show, tx = null) {
             const modal = document.getElementById('input-modal');
-            if (show) modal.classList.remove('hidden');
-            else modal.classList.add('hidden');
+            const deleteBtn = document.getElementById('btn-delete-tx');
+
+            if (show) {
+                modal.classList.remove('hidden');
+                if (tx) {
+                    // 編集モード：データをフォームにセット
+                    editingId = tx.id;
+                    deleteBtn.classList.remove('hidden');
+                    document.querySelector(`input[name="type"][value="${tx.type || (tx.income > 0 ? 'income' : 'expense')}"]`).click();
+                    document.getElementById('input-date').value = tx.date;
+                    document.getElementById('input-category').value = tx.category;
+                    document.getElementById('input-amount').value = (tx.amount || tx.income || tx.expense).toLocaleString();
+                    document.getElementById('input-summary').value = tx.summary;
+                    document.getElementById('input-payment').value = tx.payment || 'cash';
+                } else {
+                    // 新規作成モード
+                    editingId = null;
+                    deleteBtn.classList.add('hidden');
+                    document.getElementById('input-amount').value = '';
+                    document.getElementById('input-summary').value = '';
+                }
+            } else {
+                modal.classList.add('hidden');
+                editingId = null;
+            }
+        }
+
+        // --- 新規追加：モーダル内からの削除処理 ---
+        function deleteFromModal() {
+            if (editingId && confirm('この明細を本当に削除しますか？')) {
+                transactions = transactions.filter(tx => tx.id !== editingId);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+                toggleModal(false);
+                updateUI();
+            }
         }
 
         function switchType(type) {
@@ -393,41 +436,43 @@
             updateUI();
         }
 
+        // --- saveTransactionを編集対応に拡張 ---
         function saveTransaction() {
             const type = document.querySelector('input[name="type"]:checked').value;
             const date = document.getElementById('input-date').value;
             const category = document.getElementById('input-category').value;
-            const amountInputStr = document.getElementById('input-amount').value; 
+            const amountInputStr = document.getElementById('input-amount').value;
             const summary = document.getElementById('input-summary').value;
             const payment = document.getElementById('input-payment').value;
-
-            if (!date) return alert('日付を選択してください');
-            
+        
             const amount = parseInt(amountInputStr.replace(/,/g, ''), 10) || 0;
             if (amount <= 0) return alert('金額を正しく入力してください');
-
-            const newTx = {
-                id: Date.now(),
-                date: date,
-                category: category,
-                summary: summary || category,
-                type: type, 
-                income: type === 'income' ? amount : 0,
-                expense: type === 'expense' ? amount : 0,
-                amount: amount,
-                payment: type === 'expense' ? payment : 'cash'
-            };
-
-            transactions.push(newTx);
+        
+            if (editingId) {
+                // 既存データの更新
+                const index = transactions.findIndex(t => t.id === editingId);
+                transactions[index] = {
+                    ...transactions[index],
+                    date, category, summary, type,
+                    income: type === 'income' ? amount : 0,
+                    expense: type === 'expense' ? amount : 0,
+                    amount,
+                    payment: type === 'expense' ? payment : 'cash'
+                };
+            } else {
+                // 新規保存
+                transactions.push({
+                    id: Date.now(),
+                    date, category, summary, type,
+                    income: type === 'income' ? amount : 0,
+                    expense: type === 'expense' ? amount : 0,
+                    amount,
+                    payment: type === 'expense' ? payment : 'cash'
+                });
+            }
+        
             localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-
-            document.getElementById('input-amount').value = '';
-            document.getElementById('input-summary').value = '';
-            document.getElementById('input-payment').value = 'cash';
             toggleModal(false);
-
-            const targetBudgetMonth = getBudgetMonth(date);
-            updateMonthFilterOptions(targetBudgetMonth);
             updateUI();
         }
 
@@ -575,12 +620,15 @@
 
                 const card = document.createElement('div');
                 card.className = "bg-white border border-gray-100 rounded-xl p-3 shadow-xs flex justify-between items-center hover:bg-gray-50 transition-colors";
+                // updateUI内
                 card.innerHTML = `
-                    <div onclick="deleteTransaction(${tx.id})" class="flex-1 cursor-pointer">
-                        <div class="text-xs text-gray-400">${tx.date}  【${tx.category}】</div>
+                    <div onclick="toggleModal(true, ${JSON.stringify(tx).replace(/"/g, '&quot;')})" class="flex-1 cursor-pointer">
+                        <div class="text-xs text-gray-400">${tx.date} 【${tx.category}】</div>
                         <div class="text-base font-medium text-gray-800">${tx.summary}${paymentLabel}</div>
                     </div>
-                    <div class="text-base font-bold ${amtColor}">${amtText}</div>
+                    <div class="text-base font-bold ${amtColor}" onclick="deleteTransaction(${tx.id})">
+                        ${amtText}
+                    </div>
                 `;
                 historyList.appendChild(card);
             });
@@ -623,9 +671,6 @@
 
         function drawExpenseChart(expenseMap) {
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            //test//const keys = Object.keys(expenseMap);
-            //test//const data = Object.values(expenseMap);
-            //test//const total = data.reduce((s, v) => s + v, 0);
             const sortedKeys = EXPENSE_CATEGORIES.filter(c => expenseMap[c] !== undefined);
             const sortedData = sortedKeys.map(c => expenseMap[c]);
             const total = sortedData.reduce((s, v) => s + v, 0);
