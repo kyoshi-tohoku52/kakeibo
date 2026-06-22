@@ -93,44 +93,64 @@
                 </div>
         </div>
 
-
         <div id="page-wallets" class="p-4 flex-1 overflow-y-auto pb-28 hidden animate-fade-in">
             <h1 class="text-2xl font-bold text-gray-800 mb-5">👛 残高・ウォレット</h1>
 
-            <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3.5 pl-1">現在のお財布一覧</h2>
-            
             <div class="space-y-3.5">
                 <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
                     <div class="flex items-center gap-4">
                         <div class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center text-xl border border-gray-200/50">🏦</div>
                         <div>
-                            <div class="text-base font-bold text-gray-800">通常（現金・銀行）</div>
-                            <div class="text-[11px] text-gray-400">メインの資金口座残高</div>
+                            <div class="text-base font-bold text-gray-800">現金・銀行</div>
                         </div>
                     </div>
                     <span id="normal-balance" class="text-xl font-extrabold text-slate-700 tracking-tight">¥0</span>
                 </div>
-
-                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
-                    <div class="flex items-center gap-4">
-                        <img src="https://iconlab.kentakomiya.com/wp/wp-content/uploads/2019/06/icon0084.png" alt="PayPay" class="w-11 h-11 object-contain rounded-full border border-gray-100 p-0.5 bg-white">
-                        <div>
+       
+                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 shadow-xs relative">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <img src="https://iconlab.kentakomiya.com/wp/wp-content/uploads/2019/06/icon0084.png" class="w-11 h-11 rounded-full border border-gray-100">
                             <div class="text-base font-bold text-gray-800">PayPay</div>
-                            <div class="text-[11px] text-gray-400">チャージと利用の自動連動</div>
                         </div>
-                    </div>
-                    <span id="paypay-balance" class="text-xl font-extrabold text-purple-600 tracking-tight">¥0</span>
-                </div>
 
-                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
-                    <div class="flex items-center gap-4">
-                        <img src="https://play-lh.googleusercontent.com/XWuB3KQHW8BqGA4lAo60n8A0Syz2LQXEgXPQuvEps_R_47jnnVauzhoHLvRP7CT0w-Ai-Ug7IHhVd_yUiVYu" alt="モバイルSuica" class="w-11 h-11 object-contain rounded-full border border-gray-100 p-0.5 bg-white">
-                        <div>
-                            <div class="text-base font-bold text-gray-800">モバイルSuica</div>
-                            <div class="text-[11px] text-gray-400">チャージと利用の自動連動</div>
+                        <div class="text-right">
+                            <span id="paypay-balance" class="text-xl font-extrabold text-purple-600 tracking-tight block">¥0</span>
                         </div>
                     </div>
-                    <span id="suica-balance" class="text-xl font-extrabold text-emerald-600 tracking-tight">¥0</span>
+
+                    <button id="btn-edit-paypay" onclick="toggleEditMode('paypay')" class="absolute bottom-3 right-4 text-[9px] text-gray-400 underline">
+                        初期金額変更
+                    </button>
+
+                    <div id="edit-paypay" class="hidden absolute inset-0 bg-white rounded-2xl p-4.5 flex gap-2 items-center border border-gray-100">
+                        <input type="number" id="input-paypay" class="w-full border rounded-lg p-2 text-sm" placeholder="PayPay初期残高">
+                        <button onclick="updateBalance('paypay')" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-bold">OK</button>
+                        <button onclick="toggleEditMode('paypay')" class="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg font-bold">×</button>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 shadow-xs relative">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <img src="https://play-lh.googleusercontent.com/XWuB3KQHW8BqGA4lAo60n8A0Syz2LQXEgXPQuvEps_R_47jnnVauzhoHLvRP7CT0w-Ai-Ug7IHhVd_yUiVYu" class="w-11 h-11 rounded-full border border-gray-100">
+                            <div class="text-base font-bold text-gray-800">モバイルSuica</div>
+                        </div>
+                    
+                        <div class="text-right">
+                            <span id="suica-balance" class="text-xl font-extrabold text-emerald-600 tracking-tight block">¥0</span>
+                        </div>
+                    </div>
+            
+                    <button id="btn-edit-suica" onclick="toggleEditMode('suica')" class="absolute bottom-3 right-4 text-[9px] text-gray-400 underline">
+                        初期金額変更                   
+                    </button>
+            
+                    <div id="edit-suica" class="hidden absolute inset-0 bg-white rounded-2xl p-4.5 flex gap-2 items-center border border-gray-100">
+                        <input type="number" id="input-suica" class="w-full border rounded-lg p-2 text-sm" placeholder="Suica初期残高">
+                        <button onclick="updateBalance('suica')" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-bold">OK</button>
+                        <button onclick="toggleEditMode('suica')" class="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg font-bold">×</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -249,6 +269,7 @@
         const TRANSFER_CATEGORIES = ["PayPayへチャージ", "モバイルSuicaへチャージ", "その他口座間振替"];
 
         const STORAGE_KEY = 'my_kakeibo_core_data';
+        const WALLET_KEY = 'my_kakeibo_wallets';
         let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
         // --- 追加: 編集用の状態管理 ---
         let editingId = null;
@@ -362,35 +383,6 @@
         }
 
 
-        // --- toggleModalを編集対応に拡張 ---
-        //test0622.18:02//function toggleModal(show, tx = null) {
-        //test0622.18:02//    const modal = document.getElementById('input-modal');
-        //test0622.18:02//    const deleteBtn = document.getElementById('btn-delete-tx');
-
-        //test0622.18:02//    if (show) {
-        //test0622.18:02//        modal.classList.remove('hidden');
-        //test0622.18:02//        if (tx) {
-        //test0622.18:02//            // 編集モード：データをフォームにセット
-        //test0622.18:02//            editingId = tx.id;
-        //test0622.18:02//            deleteBtn.classList.remove('hidden');
-        //test0622.18:02//            document.querySelector(`input[name="type"][value="${tx.type || (tx.income > 0 ? 'income' : 'expense')}"]`).click();
-        //test0622.18:02//            document.getElementById('input-date').value = tx.date;
-        //test0622.18:02//            document.getElementById('input-category').value = tx.category;
-        //test0622.18:02//            document.getElementById('input-amount').value = (tx.amount || tx.income || tx.expense).toLocaleString();
-        //test0622.18:02//            document.getElementById('input-summary').value = tx.summary;
-        //test0622.18:02//            document.getElementById('input-payment').value = tx.payment || 'cash';
-        //test0622.18:02//        } else {
-        //test0622.18:02//            // 新規作成モード
-        //test0622.18:02//            editingId = null;
-        //test0622.18:02//            deleteBtn.classList.add('hidden');
-        //test0622.18:02//            document.getElementById('input-amount').value = '';
-        //test0622.18:02//            document.getElementById('input-summary').value = '';
-        //test0622.18:02//        }
-        //test0622.18:02//    } else {
-        //test0622.18:02//        modal.classList.add('hidden');
-        //test0622.18:02//        editingId = null;
-        //test0622.18:02//    }
-        //test0622.18:02//}
         // --- toggleModal 関数を更新 ---
         function toggleModal(show, tx = null) {
             const modal = document.getElementById('input-modal');
@@ -555,6 +547,39 @@
             updateUI();
         }
 
+        // 編集モード切り替え
+        function toggleEditMode(wallet) {
+            const editDiv = document.getElementById(`edit-${wallet}`);
+            const inputField = document.getElementById(`input-${wallet}`);
+
+            // 編集エリアが表示される直前の処理
+            if (editDiv.classList.contains('hidden')) {
+                const savedWallets = JSON.parse(localStorage.getItem('my_kakeibo_wallets')) || { paypay: 0, suica: 0 };
+                const currentVal = savedWallets[wallet] || 0;
+
+                // プレースホルダーを現在の設定値にする（例: "現在: 2340" と表示）
+                inputField.placeholder = `現在: ${currentVal}円`;
+                // 入力欄を空にしておく（または初期値を入れる）
+                inputField.value = ""; 
+            }
+
+            editDiv.classList.toggle('hidden');
+        }
+
+        // 初期残高の保存処理
+        function updateBalance(wallet) {
+            const inputVal = parseInt(document.getElementById(`input-${wallet}`).value) || 0;
+            const savedWallets = JSON.parse(localStorage.getItem('my_kakeibo_wallets')) || { paypay: 0, suica: 0 };
+
+            savedWallets[wallet] = inputVal;
+            localStorage.setItem('my_kakeibo_wallets', JSON.stringify(savedWallets));
+
+            // 完了したら編集エリアを隠し、ボタンを再表示させる
+            toggleEditMode(wallet);
+            updateUI();
+        }
+
+
         function updateUI() {
             const filterValue = document.getElementById('month-filter').value;
             const container = document.getElementById('chart-container');
@@ -566,21 +591,22 @@
                 container.classList.remove('hidden');
             }
 
-            // 各お財布の残高計算（期間に関わらず全履歴から計算）
+            // 各お財布の残高計算（保存された初期値からスタート）
+            const savedWallets = JSON.parse(localStorage.getItem('my_kakeibo_wallets')) || { paypay: 0, suica: 0 };
             let normalBalance = 0;
-            let paypayBalance = 2340; 
-            let suicaBalance = 2542;  
+            let paypayBalance = savedWallets.paypay; 
+            let suicaBalance = savedWallets.suica;  
 
             const chronologicalTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
             chronologicalTxs.forEach(tx => {
                 const txType = tx.type || (tx.income > 0 ? 'income' : 'expense');
                 const amt = tx.amount || tx.income || tx.expense || 0;
                 if (txType === 'income') {
-                    normalBalance += tx.income;
+                    normalBalance += (tx.income || 0);
                 } else if (txType === 'expense') {
-                    if (tx.payment === 'paypay') paypayBalance -= tx.expense;
-                    else if (tx.payment === 'suica') suicaBalance -= tx.expense;
-                    else normalBalance -= tx.expense;
+                    if (tx.payment === 'paypay') paypayBalance -= (tx.expense || 0);
+                    else if (tx.payment === 'suica') suicaBalance -= (tx.expense || 0);
+                    else normalBalance -= (tx.expense || 0);
                 } else if (txType === 'transfer') {
                     if (tx.category === 'PayPayへチャージ') { normalBalance -= amt; paypayBalance += amt; }
                     else if (tx.category === 'モバイルSuicaへチャージ') { normalBalance -= amt; suicaBalance += amt; }
@@ -591,11 +617,10 @@
             document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
             document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
 
-            // 全期間の資産総額計算
+            // 全期間・選択年度の残高計算
             let allTimeBalance = 0;
             transactions.forEach(tx => { allTimeBalance += ((tx.income || 0) - (tx.expense || 0)); });
 
-            // 選択期間に基づいた年度残高の計算
             let targetYear = null;
             if (filterValue.startsWith('fy-')) {
                 targetYear = parseInt(filterValue.split('-')[1]);
@@ -645,7 +670,7 @@
                 totalExpense += tx.expense || 0;
             });
 
-            // 3. 取引明細のアコーディオン表示
+            // 3. アコーディオン用のグループ化とリスト表示
             const historyList = document.getElementById('history-list');
             historyList.innerHTML = '';
 
@@ -658,6 +683,7 @@
             Object.keys(groupedTxs).sort((a, b) => b.localeCompare(a)).forEach(date => {
                 const txs = groupedTxs[date];
                 const dateId = `group-${date}`;
+                
                 const dayIncome = txs.reduce((sum, tx) => sum + (tx.income || 0), 0);
                 const dayExpense = txs.reduce((sum, tx) => sum + (tx.expense || 0), 0);
                 
