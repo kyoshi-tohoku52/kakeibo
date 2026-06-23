@@ -109,62 +109,24 @@
 
         <div id="page-wallets" class="p-4 flex-1 overflow-y-auto pb-28 hidden animate-fade-in">
             <h1 class="text-2xl font-bold text-gray-800 mb-5">👛 残高・ウォレット</h1>
-
-            <div class="space-y-3.5">
-                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 flex justify-between items-center shadow-xs">
-                    <div class="flex items-center gap-4">
-                        <div class="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center text-xl border border-gray-200/50">🏦</div>
-                        <div>
-                            <div class="text-base font-bold text-gray-800">現金・銀行</div>
-                        </div>
-                    </div>
-                    <span id="normal-balance" class="text-xl font-extrabold text-slate-700 tracking-tight">¥0</span>
-                </div>
-       
-                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 shadow-xs relative">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-4">
-                            <img src="https://iconlab.kentakomiya.com/wp/wp-content/uploads/2019/06/icon0084.png" class="w-11 h-11 rounded-full border border-gray-100">
-                            <div class="text-base font-bold text-gray-800">PayPay</div>
-                        </div>
-
-                        <div class="text-right">
-                            <span id="paypay-balance" class="text-xl font-extrabold text-purple-600 tracking-tight block">¥0</span>
-                        </div>
-                    </div>
-
-                    <button id="btn-edit-paypay" onclick="toggleEditMode('paypay')" class="absolute bottom-3 right-4 text-[9px] text-gray-400 underline">
-                        初期金額変更
-                    </button>
-
-                    <div id="edit-paypay" class="hidden absolute inset-0 bg-white rounded-2xl p-4.5 flex gap-2 items-center border border-gray-100">
-                        <input type="number" id="input-paypay" class="w-full border rounded-lg p-2 text-sm" placeholder="PayPay初期残高">
-                        <button onclick="updateBalance('paypay')" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-bold">OK</button>
-                        <button onclick="toggleEditMode('paypay')" class="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg font-bold">×</button>
-                    </div>
-                </div>
                 
-                <div class="bg-white border border-gray-100 rounded-2xl p-4.5 shadow-xs relative">
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center gap-4">
-                            <img src="https://play-lh.googleusercontent.com/XWuB3KQHW8BqGA4lAo60n8A0Syz2LQXEgXPQuvEps_R_47jnnVauzhoHLvRP7CT0w-Ai-Ug7IHhVd_yUiVYu" class="w-11 h-11 rounded-full border border-gray-100">
-                            <div class="text-base font-bold text-gray-800">モバイルSuica</div>
-                        </div>
-                    
-                        <div class="text-right">
-                            <span id="suica-balance" class="text-xl font-extrabold text-emerald-600 tracking-tight block">¥0</span>
-                        </div>
+            <div id="wallet-list" class="space-y-3.5"></div>
+                
+            <button onclick="toggleWalletManager(true)" class="w-full mt-6 text-sm text-gray-500 underline">
+                決済種類の追加・削除
+            </button>
+            <div id="wallet-manager-modal" class="hidden fixed inset-0 bg-black/60 z-50 p-4 flex items-center justify-center">
+                <div class="bg-white rounded-2xl w-full max-w-sm p-5 shadow-2xl">
+                    <h3 class="font-bold mb-4">決済種類を管理</h3>
+
+                    <div id="wallet-edit-list" class="space-y-2 mb-4"></div>
+
+                    <div class="flex gap-2">
+                        <select id="select-add-wallet" class="border rounded p-2 flex-1 text-sm bg-gray-50"></select>
+                        <button onclick="addWalletFromSelect()" class="bg-blue-600 text-white px-4 rounded text-sm font-bold">追加</button>
                     </div>
-            
-                    <button id="btn-edit-suica" onclick="toggleEditMode('suica')" class="absolute bottom-3 right-4 text-[9px] text-gray-400 underline">
-                        初期金額変更                   
-                    </button>
-            
-                    <div id="edit-suica" class="hidden absolute inset-0 bg-white rounded-2xl p-4.5 flex gap-2 items-center border border-gray-100">
-                        <input type="number" id="input-suica" class="w-full border rounded-lg p-2 text-sm" placeholder="Suica初期残高">
-                        <button onclick="updateBalance('suica')" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-bold">OK</button>
-                        <button onclick="toggleEditMode('suica')" class="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg font-bold">×</button>
-                    </div>
+
+                    <button onclick="toggleWalletManager(false)" class="mt-4 w-full text-gray-400 text-sm">閉じる</button>
                 </div>
             </div>
         </div>
@@ -274,6 +236,26 @@
 
     <script>
         const INCOME_CATEGORIES = ["基本給", "役職手当", "時間外手当", "夜勤手当", "賞与", "その他"];
+        const ALL_WALLET_OPTIONS = [
+            { id: 'cash', name: '現金・銀行', icon: '🏦', isImg: false },
+            { id: 'paypay', name: 'PayPay', icon: 'images/paypay.png', isImg: true },
+            { id: 'suica', name: 'モバイルSuica', icon: 'images/suica.png', isImg: true },
+            { id: 'rakuten', name: '楽天Edy', icon: 'images/rakuten.png', isImg: true },
+            { id: 'waon', name: 'WAON', icon: 'images/waon.png', isImg: true },
+            { id: 'toica', name: 'モバイルTOICA', icon: 'images/toica.png', isImg: true },
+            { id: 'icoca', name: 'モバイルICOCA', icon: 'images/icoca.png', isImg: true }
+        ];
+        // --- 修正箇所: 設定読み込みロジック ---
+        function getWalletConfig() {
+            const saved = localStorage.getItem('my_wallet_settings');
+            if (saved) return JSON.parse(saved);
+                
+            // 何も設定がない場合は「現金」だけにする
+            const defaults = [ALL_WALLET_OPTIONS[0]]; 
+            localStorage.setItem('my_wallet_settings', JSON.stringify(defaults));
+            return defaults;
+        }
+
         const EXPENSE_CATEGORIES = [
             "住宅費", "水道光熱費", "通信費", "税金", "社会保険料", 
             "保険料", "労働関係費", "株式投資費", "貯蓄（財形）", "食費", "外食費", 
@@ -462,9 +444,10 @@
                 lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-red-600 shadow-xs";
                 paymentContainer.classList.remove('hidden');
             } else if (type === 'transfer') {
-                TRANSFER_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
-                lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-purple-600 shadow-xs";
-                paymentContainer.classList.add('hidden');
+                const activeWallets = getWalletConfig();
+                activeWallets.forEach(w => {
+                    if (w.id !== 'cash') catSelect.add(new Option(`${w.name}へチャージ`, `charge_${w.id}`));
+                });
             } else {
                 INCOME_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
                 lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-green-600 shadow-xs";
@@ -565,19 +548,23 @@
         function toggleEditMode(wallet) {
             const editDiv = document.getElementById(`edit-${wallet}`);
             const inputField = document.getElementById(`input-${wallet}`);
+            const btn = document.getElementById(`btn-edit-${wallet}`); // ボタンを取得
 
-            // 編集エリアが表示される直前の処理
+            // 編集エリアが表示される直前の処理（開くとき）
             if (editDiv.classList.contains('hidden')) {
                 const savedWallets = JSON.parse(localStorage.getItem('my_kakeibo_wallets')) || { paypay: 0, suica: 0 };
                 const currentVal = savedWallets[wallet] || 0;
-
-                // プレースホルダーを現在の設定値にする（例: "現在: 2340" と表示）
-                inputField.placeholder = `現在: ${currentVal}円`;
-                // 入力欄を空にしておく（または初期値を入れる）
-                inputField.value = ""; 
+                inputField.placeholder = `開始時: ${currentVal}円`;
+                inputField.value = "";
             }
-
+        
+            // 編集エリアの表示切替
             editDiv.classList.toggle('hidden');
+
+            // ボタンの表示切替（ボタンだけを消す）
+            if (btn) {
+                btn.classList.toggle('hidden');
+            }
         }
 
         // 初期残高の保存処理
@@ -606,30 +593,24 @@
             }
 
             // 各お財布の残高計算（保存された初期値からスタート）
-            const savedWallets = JSON.parse(localStorage.getItem('my_kakeibo_wallets')) || { paypay: 0, suica: 0 };
-            let normalBalance = 0;
-            let paypayBalance = savedWallets.paypay; 
-            let suicaBalance = savedWallets.suica;  
+            const savedWallets = JSON.parse(localStorage.getItem(WALLET_KEY)) || {};
+            let balances = { cash: 0, ...savedWallets }; // ※初期残高を読み込む
 
-            const chronologicalTxs = [...transactions].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
-            chronologicalTxs.forEach(tx => {
-                const txType = tx.type || (tx.income > 0 ? 'income' : 'expense');
+            [...transactions].sort((a,b) => a.date.localeCompare(b.date)).forEach(tx => {
                 const amt = tx.amount || tx.income || tx.expense || 0;
-                if (txType === 'income') {
-                    normalBalance += (tx.income || 0);
-                } else if (txType === 'expense') {
-                    if (tx.payment === 'paypay') paypayBalance -= (tx.expense || 0);
-                    else if (tx.payment === 'suica') suicaBalance -= (tx.expense || 0);
-                    else normalBalance -= (tx.expense || 0);
-                } else if (txType === 'transfer') {
-                    if (tx.category === 'PayPayへチャージ') { normalBalance -= amt; paypayBalance += amt; }
-                    else if (tx.category === 'モバイルSuicaへチャージ') { normalBalance -= amt; suicaBalance += amt; }
+                const txType = tx.type || (tx.income > 0 ? 'income' : 'expense');
+
+                if (txType === 'expense') {
+                    balances[tx.payment] = (balances[tx.payment] || 0) - amt;
+                } else if (txType === 'transfer' && tx.category.startsWith('charge_')) {
+                    const targetId = tx.category.replace('charge_', '');
+                    balances['cash'] = (balances['cash'] || 0) - amt;
+                    balances[targetId] = (balances[targetId] || 0) + amt;
+                } else if (txType === 'income') {
+                    balances['cash'] = (balances['cash'] || 0) + amt;
                 }
             });
-
-            document.getElementById('normal-balance').innerText = `¥${normalBalance.toLocaleString()}`;
-            document.getElementById('paypay-balance').innerText = `¥${paypayBalance.toLocaleString()}`;
-            document.getElementById('suica-balance').innerText = `¥${suicaBalance.toLocaleString()}`;
+            renderWallets(balances);
 
             // 全期間・選択年度の残高計算
             let allTimeBalance = 0;
@@ -1072,6 +1053,72 @@
                     }
                 }
             });
+        }
+
+        function renderWallets(balances) {
+            const list = document.getElementById('wallet-list');
+            list.innerHTML = '';
+
+            getWalletConfig().forEach(w => {
+                const bal = balances[w.id] || 0;
+                let iconHtml = w.isImg 
+                    ? `<div class="w-11 h-11 flex-shrink-0 bg-white rounded-full border border-gray-100 shadow-xs overflow-hidden flex items-center justify-center">
+                         <img src="${w.icon}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<span class=\'text-xl\'>💰</span>'">
+                       </div>`
+                    : `<div class="w-11 h-11 flex-shrink-0 flex items-center justify-center text-xl bg-slate-100 rounded-full border border-gray-200/50">${w.icon}</div>`;
+
+                list.innerHTML += `
+                    <div class="bg-white border border-gray-100 rounded-2xl p-4.5 shadow-xs relative">
+                        <div class="flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                ${iconHtml}
+                                <div class="text-base font-bold text-gray-800">${w.name}</div>
+                            </div>
+                            <span class="text-xl font-extrabold text-slate-700 tracking-tight">¥${bal.toLocaleString()}</span>
+                        </div>
+
+                        <div id="btn-area-${w.id}" class="flex justify-end">
+                            <button id="btn-edit-${w.id}" onclick="toggleEditMode('${w.id}')" 
+                                    class="mt-3 text-[10px] text-gray-400 underline hover:text-blue-500">
+                                初期金額変更
+                            </button>
+                        </div>
+
+                        <div id="edit-${w.id}" class="hidden mt-2 flex gap-2 items-center">
+                            <input type="number" id="input-${w.id}" class="w-full border rounded-lg p-2 text-sm" placeholder="初期残高">
+                            <button onclick="updateBalance('${w.id}')" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg font-bold">OK</button>
+                            <button onclick="toggleEditMode('${w.id}')" class="bg-gray-200 text-gray-600 text-sm px-4 py-2 rounded-lg font-bold">×</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function toggleWalletManager(show) {
+            document.getElementById('wallet-manager-modal').classList.toggle('hidden', !show);
+            if (!show) return;
+            const list = document.getElementById('wallet-edit-list');
+            const select = document.getElementById('select-add-wallet');
+            list.innerHTML = ''; select.innerHTML = '<option value="">追加する種類を選択...</option>';
+            const current = getWalletConfig();
+            current.forEach(w => {
+                list.innerHTML += `<div class="flex justify-between p-2 bg-gray-50 rounded text-sm items-center"><span>${w.name}</span>${w.id !== 'cash' ? `<button onclick="deleteWallet('${w.id}')" class="text-red-500">削除</button>` : ''}</div>`;
+            });
+            ALL_WALLET_OPTIONS.forEach(opt => { if (!current.find(c => c.id === opt.id)) select.add(new Option(opt.name, opt.id)); });
+        }
+
+        function addWalletFromSelect() {
+            const id = document.getElementById('select-add-wallet').value;
+            if (!id) return;
+            const configs = getWalletConfig();
+            configs.push(ALL_WALLET_OPTIONS.find(o => o.id === id));
+            localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
+            toggleWalletManager(true); updateUI();
+        }
+
+        function deleteWallet(id) {
+            let configs = getWalletConfig().filter(w => w.id !== id);
+            localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
+            toggleWalletManager(true); updateUI();
         }
     </script>
 </body>
