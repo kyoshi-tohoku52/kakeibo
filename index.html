@@ -447,6 +447,7 @@
 
         function switchType(type) {
             const catSelect = document.getElementById('input-category');
+            const paymentSelect = document.getElementById('input-payment'); // 支払方法のセレクトボックス
             const lblExpense = document.getElementById('label-expense');
             const lblTransfer = document.getElementById('label-transfer');
             const lblIncome = document.getElementById('label-income');
@@ -461,11 +462,18 @@
                 EXPENSE_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
                 lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-red-600 shadow-xs";
                 paymentContainer.classList.remove('hidden');
-            } else if (type === 'transfer') {
+
+                // ★ここを修正：現在有効な決済手段を読み込んで更新する
                 const activeWallets = getWalletConfig();
+                paymentSelect.innerHTML = ''; // 一旦クリア
                 activeWallets.forEach(w => {
-                    if (w.id !== 'cash') catSelect.add(new Option(`${w.name}へチャージ`, `charge_${w.id}`));
+                    paymentSelect.add(new Option(w.name, w.id));
                 });
+
+            } else if (type === 'transfer') {
+                TRANSFER_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
+                lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-purple-600 shadow-xs";
+                paymentContainer.classList.add('hidden');
             } else {
                 INCOME_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
                 lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-green-600 shadow-xs";
