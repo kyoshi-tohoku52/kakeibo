@@ -1114,7 +1114,6 @@
             localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
             toggleWalletManager(true); updateUI();
         }
-
         function deleteWallet(id) {
             let configs = getWalletConfig().filter(w => w.id !== id);
             localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
