@@ -38,24 +38,27 @@
             </div>
 
             <div class="bg-slate-900 text-white rounded-2xl p-4 mb-5 shadow-md border border-slate-800/30">
-                
+
                 <div class="flex justify-between text-[11px] text-slate-400 mb-3 bg-slate-800/40 p-2 rounded-xl border border-slate-800/50">
-                    <div>資産総額(全期間): <span id="all-time-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
-                    <div><span id="fiscal-year-label">----</span>年度残高: <span id="year-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+                    <div>資産(全期間): <span id="all-time-balance" class="font-bold text-slate-200 ml-1">¥0</span></div>
+
+                    <div id="year-display-container">
+                        <span id="fiscal-year-label">----</span>年度残高: <span id="year-balance" class="font-bold text-slate-200 ml-1">¥0</span>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center mb-2">
-                    <span class="text-sm text-slate-400">選択月の純収支</span>
+                    <span class="text-sm text-slate-400">収支</span>
                     <span id="total-balance" class="text-2xl font-bold text-blue-400">¥0</span>
                 </div>
                 <hr class="border-slate-800 my-2">
                 <div class="flex justify-around text-center mt-2">
                     <div>
-                        <div class="text-xs text-slate-400">収入合計</div>
+                        <div class="text-xs text-slate-400">収入</div>
                         <div id="total-income" class="text-base font-bold text-green-400">¥0</div>
                     </div>
                     <div>
-                        <div class="text-xs text-slate-400">支出合計</div>
+                        <div class="text-xs text-slate-400">支出</div>
                         <div id="total-expense" class="text-base font-bold text-red-400">¥0</div>
                     </div>
                 </div>
@@ -735,6 +738,18 @@
 
             // 5. グラフ描画関数へデータを渡す
             renderCharts(filteredTxs);
+
+            const yearDisplay = document.getElementById('year-display-container');
+
+            // 全期間（filterValue === 'all'）の場合は非表示にし、それ以外は表示する
+            if (filterValue === 'all') {
+                yearDisplay.classList.add('hidden');
+            } else {
+                yearDisplay.classList.remove('hidden');
+                // 年度ラベルを更新
+                document.getElementById('fiscal-year-label').innerText = targetYear;
+                document.getElementById('year-balance').innerText = `¥${yearBalance.toLocaleString()}`;
+            }
         }
 
         function renderCharts(filteredTxs) {
@@ -771,7 +786,6 @@
         }
 
         function drawExpenseChart(txs) {
-            // 期間内のデータから集計マップを作成
             const expenseMap = {};
             txs.forEach(tx => {
                 if (tx.expense > 0) {
@@ -780,16 +794,14 @@
             });
         
             const ctx = document.getElementById('expenseChart').getContext('2d');
-            // 存在するカテゴリのみ抽出
             const sortedKeys = EXPENSE_CATEGORIES.filter(c => expenseMap[c] > 0);
             const sortedData = sortedKeys.map(c => expenseMap[c]);
-            const total = sortedData.reduce((s, v) => s + v, 0);
+            const initialTotal = sortedData.reduce((s, v) => s + v, 0);
         
-            // データがない場合の処理
             const chartEl = document.getElementById('expenseChart');
             const emptyMsgEl = document.getElementById('expense-empty-msg');
-
-            if (total === 0) {
+        
+            if (initialTotal === 0) {
                 chartEl.classList.add('hidden');
                 emptyMsgEl.classList.remove('hidden');
                 return;
@@ -797,14 +809,19 @@
             chartEl.classList.remove('hidden');
             emptyMsgEl.classList.add('hidden');
         
-            if (expenseChart) expenseChart.destroy();
+            if (typeof expenseChart !== 'undefined' && expenseChart) expenseChart.destroy();
         
             expenseChart = new Chart(ctx, {
                 type: 'doughnut',
                 plugins: [ChartDataLabels, {
                     id: 'centerText',
                     afterDatasetsDraw: (chart) => {
-                        const { ctx, chartArea: { width, height, left, top } } = chart;
+                        const { ctx, chartArea: { width, height, left, top }, data } = chart;
+                        let currentTotal = 0;
+                        chart.getDatasetMeta(0).data.forEach((element, index) => {
+                            if (!element.hidden) currentTotal += data.datasets[0].data[index];
+                        });
+                    
                         ctx.save();
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
@@ -815,7 +832,7 @@
                         ctx.fillText('支出総額', centerX, centerY - 8);
                         ctx.fillStyle = '#1f2937';
                         ctx.font = 'bold 17px sans-serif';
-                        ctx.fillText('¥' + total.toLocaleString(), centerX, centerY + 10);
+                        ctx.fillText('¥' + currentTotal.toLocaleString(), centerX, centerY + 10);
                         ctx.restore();
                     }
                 }],
@@ -823,6 +840,7 @@
                     labels: sortedKeys,
                     datasets: [{
                         data: sortedData,
+                        // 色の配列を保持しておく
                         backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#14b8a6', '#64748b', '#a855f7', '#0ea5e9', '#ec4899'],
                         borderWidth: 0,
                         cutout: '50%'
@@ -831,14 +849,56 @@
                 options: {
                     responsive: true,
                     plugins: {
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
+                        legend: {
+                            position: 'bottom',
+                            labels: { 
+                                boxWidth: 10, 
+                                font: { size: 9 },
+                                // 色情報を保持しつつ、取り消し線用のスタイルを適用
+                                generateLabels: (chart) => {
+                                    const data = chart.data;
+                                    return data.labels.map((label, i) => {
+                                        const meta = chart.getDatasetMeta(0);
+                                        const hidden = meta.data[i].hidden;
+                                        const color = data.datasets[0].backgroundColor[i];
+                                        return {
+                                            text: label,
+                                            fillStyle: hidden ? '#d1d5db' : color, // 色を適用
+                                            strokeStyle: hidden ? '#d1d5db' : color,
+                                            lineWidth: 1,
+                                            hidden: hidden,
+                                            index: i
+                                        };
+                                    });
+                                }
+                            },
+                            onClick: (e, legendItem, legend) => {
+                                const index = legendItem.index;
+                                const meta = legend.chart.getDatasetMeta(0);
+                                meta.data[index].hidden = !meta.data[index].hidden;
+                                legend.chart.update();
+                            }
+                        },
                         tooltip: { 
-                            callbacks: { label: (c) => `${c.label}: ¥${c.raw.toLocaleString()} (${((c.raw/total)*100).toFixed(1)}%)` } 
+                            callbacks: { 
+                                label: (c) => {
+                                    const meta = c.chart.getDatasetMeta(0);
+                                    let currentTotal = 0;
+                                    meta.data.forEach((el, i) => { if (!el.hidden) currentTotal += c.dataset.data[i]; });
+                                    return `${c.label}: ¥${c.raw.toLocaleString()} (${((c.raw / currentTotal) * 100).toFixed(1)}%)`;
+                                }
+                            } 
                         },
                         datalabels: {
                             color: '#fff',
                             font: { weight: 'bold', size: 10 },
-                            formatter: (v) => (total > 0 && (v/total) > 0.05 ? Math.round((v/total)*100) + '%' : '')
+                            formatter: (v, context) => {
+                                const meta = context.chart.getDatasetMeta(0);
+                                if (meta.data[context.dataIndex].hidden) return '';
+                                let currentTotal = 0;
+                                meta.data.forEach((el, i) => { if (!el.hidden) currentTotal += context.dataset.data[i]; });
+                                return (currentTotal > 0 && (v / currentTotal) > 0.05) ? Math.round((v / currentTotal) * 100) + '%' : '';
+                            }
                         }
                     }
                 }
