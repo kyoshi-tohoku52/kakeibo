@@ -150,6 +150,13 @@
                     <input type="file" id="import-file" onchange="importData(event)" class="hidden" accept=".json">
                 </div>
             </div>
+            <div class="mt-8 bg-white border border-blue-100 rounded-2xl p-5 shadow-sm">
+                <h3 class="text-sm font-bold text-blue-800 mb-2">アプリの更新</h3>
+                <p class="text-xs text-gray-500 mb-4 leading-relaxed">最新のデータ管理設定や機能変更を反映させるには、ブラウザのキャッシュを無視して強制的に再読み込みしてください。</p>
+                <button onclick="location.reload(true)" class="w-full bg-blue-50 text-blue-600 border border-blue-200 text-sm py-3 rounded-xl font-bold hover:bg-blue-100 transition-colors">
+                    🔄 最新バージョンへ更新
+                </button>
+            </div>
         </div>
 
 
@@ -342,7 +349,14 @@
         // バックアップ・復元
         function exportData() {
             if (transactions.length === 0) return alert('出力するデータがありません。');
-            const dataStr = JSON.stringify(transactions, null, 2);
+
+            const exportObj = {
+                transactions: transactions,
+                wallets: JSON.parse(localStorage.getItem(WALLET_KEY)) || {},
+                walletSettings: getWalletConfig() // 決済手段の構成も保存
+            };
+
+            const dataStr = JSON.stringify(exportObj, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -359,25 +373,29 @@
             reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
+
+                    // 旧バージョンデータへの対応 (配列だけの場合)
                     if (Array.isArray(imported)) {
-                        if (confirm('データを復元しますか？（現在のデータは上書きされます）')) {
-                            transactions = imported;
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-                            updateMonthFilterOptions();
-                            updateUI();
-                            alert('データの復元が完了しました！');
-                        }
+                        transactions = imported;
+                    } else if (imported.transactions) {
+                        transactions = imported.transactions;
+                        if (imported.wallets) localStorage.setItem(WALLET_KEY, JSON.stringify(imported.wallets));
+                        if (imported.walletSettings) localStorage.setItem('my_wallet_settings', JSON.stringify(imported.walletSettings));
                     } else {
-                        alert('正しいバックアップファイルではありません。');
+                        throw new Error("Invalid format");
                     }
+                
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+                    updateMonthFilterOptions();
+                    updateUI();
+                    alert('データと決済設定の復元が完了しました！');
                 } catch (err) {
-                    alert('ファイルの読み込みに失敗しました。');
+                    alert('バックアップファイルの形式が正しくありません。');
                 }
             };
             reader.readAsText(file);
             event.target.value = '';
         }
-
 
         // --- toggleModal 関数を更新 ---
         function toggleModal(show, tx = null) {
@@ -823,7 +841,7 @@
                         ctx.font = '11px sans-serif';
                         ctx.fillText('支出総額', centerX, centerY - 8);
                         ctx.fillStyle = '#1f2937';
-                        ctx.font = 'bold 13px sans-serif';
+                        ctx.font = 'bold 17px sans-serif';
                         ctx.fillText('¥' + currentTotal.toLocaleString(), centerX, centerY + 10);
                         ctx.restore();
                     }
@@ -1114,6 +1132,7 @@
             localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
             toggleWalletManager(true); updateUI();
         }
+
         function deleteWallet(id) {
             let configs = getWalletConfig().filter(w => w.id !== id);
             localStorage.setItem('my_wallet_settings', JSON.stringify(configs));
