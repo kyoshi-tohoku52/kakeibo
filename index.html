@@ -23,14 +23,28 @@
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* スマホ全体の誤スクロール・びよんとなるバウンスを完全にロック */
+        /* 修正案 */
         html, body {
-            overflow: hidden;
-            height: 100vh;
-            height: 100dvh;
+            height: 100%;
             margin: 0;
             padding: 0;
-            position: relative;
+            background-color: #f3f4f6; /* bg-gray-100 に合わせる */
+        }
+        /* 全体を flex-col で管理し、メインエリアだけを伸縮させる */
+        body {
+            display: flex;
+            justify-content: center;
+        }
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            width: 100%;
+            max-width: 448px; /* max-w-md */
+            background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
         }
     </style>
 </head>
@@ -189,7 +203,7 @@
                         <input type="radio" name="type" value="expense" checked onchange="switchType('expense')" class="hidden"> 支出
                     </label>
                     <label class="flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs transition-colors" id="label-transfer">
-                        <input type="radio" name="type" value="transfer" onchange="switchType('transfer')" class="hidden"> 振替
+                        <input type="radio" name="type" value="transfer" onchange="switchType('transfer')" class="hidden"> チャージ
                     </label>
                     <label class="flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs transition-colors" id="label-income">
                         <input type="radio" name="type" value="income" onchange="switchType('income')" class="hidden"> 収入
@@ -212,7 +226,7 @@
                     <select id="input-payment" class="w-full border rounded-lg p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                         <option value="cash">通常（現金・クレジットカード等）</option>
                         <option value="paypay">PayPay</option>
-                        <option value="suica">モバイルSuica</option>
+                        <option value="suica">Suica</option>
                     </select>
                 </div>
 
@@ -246,11 +260,11 @@
         const ALL_WALLET_OPTIONS = [
             { id: 'cash', name: '現金・銀行', icon: '🏦', isImg: false },
             { id: 'paypay', name: 'PayPay', icon: 'images/paypay.png', isImg: true },
-            { id: 'suica', name: 'モバイルSuica', icon: 'images/suica.png', isImg: true },
+            { id: 'suica', name: 'Suica', icon: 'images/suica.png', isImg: true },
             { id: 'rakuten', name: '楽天Edy', icon: 'images/rakuten.png', isImg: true },
             { id: 'waon', name: 'WAON', icon: 'images/waon.png', isImg: true },
-            { id: 'toica', name: 'モバイルTOICA', icon: 'images/toica.png', isImg: true },
-            { id: 'icoca', name: 'モバイルICOCA', icon: 'images/icoca.png', isImg: true }
+            { id: 'toica', name: 'TOICA', icon: 'images/toica.png', isImg: true },
+            { id: 'icoca', name: 'ICOCA', icon: 'images/icoca.png', isImg: true }
         ];
         // --- 修正箇所: 設定読み込みロジック ---
         function getWalletConfig() {
@@ -269,7 +283,7 @@
             "交際費", "交通費", "教育・教養費", "医療費", "日用品費", 
             "娯楽費", "その他支出"
         ];
-        const TRANSFER_CATEGORIES = ["PayPayへチャージ", "モバイルSuicaへチャージ", "その他口座間振替"];
+        const TRANSFER_CATEGORIES = ["PayPayへチャージ", "Suicaへチャージ", "その他口座間振替"];
 
         const STORAGE_KEY = 'my_kakeibo_core_data';
         const WALLET_KEY = 'my_kakeibo_wallets';
@@ -447,33 +461,42 @@
 
         function switchType(type) {
             const catSelect = document.getElementById('input-category');
-            const paymentSelect = document.getElementById('input-payment'); // 支払方法のセレクトボックス
+            const paymentSelect = document.getElementById('input-payment');
             const lblExpense = document.getElementById('label-expense');
             const lblTransfer = document.getElementById('label-transfer');
             const lblIncome = document.getElementById('label-income');
             const paymentContainer = document.getElementById('payment-method-container');
-            
+
             catSelect.innerHTML = '';
             lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
             lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
             lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-medium text-xs text-gray-500";
-            
+
+            const activeWallets = getWalletConfig(); // 最新の設定を取得
+
             if (type === 'expense') {
                 EXPENSE_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
                 lblExpense.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-red-600 shadow-xs";
                 paymentContainer.classList.remove('hidden');
 
-                // ★ここを修正：現在有効な決済手段を読み込んで更新する
-                const activeWallets = getWalletConfig();
-                paymentSelect.innerHTML = ''; // 一旦クリア
+                paymentSelect.innerHTML = ''; 
                 activeWallets.forEach(w => {
-                    paymentSelect.add(new Option(w.name, w.id));
+                    // IDが'cash'の場合だけ表示名を「現金・クレジットカード」にする
+                    const displayName = (w.id === 'cash') ? '現金・クレジットカード' : w.name;
+                    paymentSelect.add(new Option(displayName, w.id));
                 });
-
             } else if (type === 'transfer') {
-                TRANSFER_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
+                // ここで動的に決済手段に基づいた「チャージ」項目を作成
+                // 現金以外の決済手段に対して「～へチャージ」を作成
+                activeWallets.forEach(w => {
+                    if (w.id !== 'cash') {
+                        catSelect.add(new Option(`${w.name}へチャージ`, `charge_${w.id}`));
+                    }
+                });
+                
                 lblTransfer.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-purple-600 shadow-xs";
-                paymentContainer.classList.add('hidden');
+                paymentContainer.classList.add('hidden'); // 振替時は支払方法選択を隠す
+            
             } else {
                 INCOME_CATEGORIES.forEach(c => catSelect.add(new Option(c, c)));
                 lblIncome.className = "flex-1 text-center py-1.5 rounded-md cursor-pointer font-bold text-xs bg-white text-green-600 shadow-xs";
@@ -497,7 +520,7 @@
         
             const amount = parseInt(amountInputStr.replace(/,/g, ''), 10) || 0;
             if (amount <= 0) return alert('金額を正しく入力してください');
-        
+       
             if (editingId) {
                 // 既存データの更新
                 const index = transactions.findIndex(t => t.id === editingId);
@@ -507,7 +530,8 @@
                     income: type === 'income' ? amount : 0,
                     expense: type === 'expense' ? amount : 0,
                     amount,
-                    payment: type === 'expense' ? payment : 'cash'
+                    // typeがtransferの時はpaymentを特別に扱う
+                    payment: type === 'expense' ? payment : (type === 'transfer' ? 'cash' : 'cash')
                 };
             } else {
                 // 新規保存
